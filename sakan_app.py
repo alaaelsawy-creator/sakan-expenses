@@ -100,7 +100,7 @@ with col1:
                 st.warning("يرجى إدخال مبلغ صحيح.")
 
 with col2:
-    st.subheader(f"📊 تصفية {selected_month_ar}")
+    st.subheader(f"📊 تصفية شهر {selected_month_ar}")
     total_extra = pd.to_numeric(month_df["المبلغ"], errors='coerce').sum()
     fair_extra = total_extra / len(SHABAB) if total_extra > 0 else 0
     summary = []
