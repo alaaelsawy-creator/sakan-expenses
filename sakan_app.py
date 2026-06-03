@@ -34,10 +34,10 @@ with col_top1:
     current_date = datetime.now()
     month_options_en = [datetime(2026, m, 1).strftime("%B %Y") for m in range(1, 13)]
     month_options_ar = [f"{MONTHS_AR[m.split()[0]]} {m.split()[1]}" for m in month_options_en]
-    selected_month_ar = st.selectbox("📅 اختر الشهر:", month_options_ar, index=current_date.month - 1)
+    selected_month_ar = st.selectbox(" :📅 اختر الشهر", month_options_ar, index=current_date.month - 1)
 
 with col_top2:
-    rent_val = st.number_input(f"💰 إيجار الفرد ({selected_month_ar}):", min_value=0.0, value=42.165, format="%.3f")
+    rent_val = st.number_input(f"💰 :إيجار الفرد ({selected_month_ar})", min_value=0.0, value=42.165, format="%.3f")
 
 st.divider()
 
@@ -49,9 +49,9 @@ with col1:
     st.subheader("➕ إضافة مصروف")
     with st.form("add_form", clear_on_submit=True):
         name = st.selectbox("من دفع؟", SHABAB)
-        amount = st.number_input("المبلغ:", min_value=0.0, step=0.1, format="%.3f")
-        note = st.text_input("البيان:", placeholder="مثال: أنبوبة، منظفات")
-        uploaded_img = st.file_uploader("📸 رفع صورة الفاتورة:", type=['png', 'jpg', 'jpeg'])
+        amount = st.number_input("المبلغ", min_value=0.0, step=0.1, format="%.3f")
+        note = st.text_input("البيان", placeholder="مثال: شاي، سكر ، أنبوبة ، صابون ")
+        uploaded_img = st.file_uploader(" :📸 رفع صورة الفاتورة", type=['png', 'jpg', 'jpeg'])
         submit = st.form_submit_button("تسجيل المصروف")
         
         if submit:
