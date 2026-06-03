@@ -128,7 +128,7 @@ else:
 
 st.divider()
 st.subheader("📱 تقرير الواتساب")
-report = f"*تقرير مصاريف السكن - {selected_month_ar}*\n🏠 الإيجار: {rent_val:.3f}\n💰 النثريات: {total_extra:.3f}\n"
+report = f"*تقرير مصاريف السكن - {selected_month_ar}*\n🏠 الإيجار: {rent_val:.3f}\n💰 المصاريف: {total_extra:.3f}\n"
 for item in summary:
     report += f"• {item['الاسم']}: {item['الوضع']} *{item['المبلغ']}*\n"
 st.code(report)
