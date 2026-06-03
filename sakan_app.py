@@ -17,136 +17,48 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ─────────────────────────────────────────────
-#  CSS مخصص – تصميم عربي احترافي
-# ─────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
-
-html, body, [class*="css"] {
-    font-family: 'Tajawal', sans-serif !important;
-    direction: rtl;
-}
-
+html, body, [class*="css"] { font-family: 'Tajawal', sans-serif !important; direction: rtl; }
 .main { background: #0f1117; }
-
-/* بطاقات الإحصاء */
 .stat-card {
     background: linear-gradient(135deg, #1e2130 0%, #252840 100%);
-    border: 1px solid #2e3250;
-    border-radius: 16px;
-    padding: 20px;
-    text-align: center;
-    margin-bottom: 16px;
+    border: 1px solid #2e3250; border-radius: 16px;
+    padding: 20px; text-align: center; margin-bottom: 16px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
 .stat-card .value { font-size: 1.8rem; font-weight: 800; color: #fff; }
 .stat-card .label { font-size: 0.85rem; color: #8892b0; margin-top: 4px; }
-
-/* صف الشخص */
 .person-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #1a1e2e;
-    border: 1px solid #2a2f45;
-    border-radius: 12px;
-    padding: 14px 20px;
-    margin-bottom: 10px;
-    direction: rtl;
+    display: flex; align-items: center; justify-content: space-between;
+    background: #1a1e2e; border: 1px solid #2a2f45;
+    border-radius: 12px; padding: 14px 20px; margin-bottom: 10px; direction: rtl;
 }
-.person-name { font-weight: 700; font-size: 1rem; color: #e0e6ff; }
-.person-paid { font-size: 0.9rem; color: #7ecfb3; }
-.badge-green {
-    background: #0d3b2e;
-    color: #4ade80;
-    border: 1px solid #166534;
-    border-radius: 20px;
-    padding: 4px 14px;
-    font-weight: 700;
-    font-size: 0.85rem;
-}
-.badge-red {
-    background: #3b0d0d;
-    color: #f87171;
-    border: 1px solid #991b1b;
-    border-radius: 20px;
-    padding: 4px 14px;
-    font-weight: 700;
-    font-size: 0.85rem;
-}
-.badge-vacation {
-    background: #1a2e3b;
-    color: #60a5fa;
-    border: 1px solid #1d4ed8;
-    border-radius: 20px;
-    padding: 4px 14px;
-    font-weight: 700;
-    font-size: 0.85rem;
-}
-.badge-zero {
-    background: #2a2a2a;
-    color: #aaa;
-    border: 1px solid #444;
-    border-radius: 20px;
-    padding: 4px 14px;
-    font-weight: 700;
-    font-size: 0.85rem;
-}
-
-/* تقرير الواتساب */
-.whatsapp-box {
-    background: #0a1a0f;
-    border: 1px solid #166534;
-    border-radius: 12px;
-    padding: 20px;
-    font-family: 'Tajawal', monospace;
-    white-space: pre-wrap;
-    color: #4ade80;
-    font-size: 0.95rem;
-    direction: rtl;
-}
-
-/* عنوان */
-.app-header {
-    background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #1565c0 100%);
-    border-radius: 20px;
-    padding: 30px;
-    text-align: center;
-    margin-bottom: 30px;
-    box-shadow: 0 8px 32px rgba(26,35,126,0.4);
-}
-.app-header h1 { color: white; font-size: 2rem; font-weight: 800; margin: 0; }
-.app-header p { color: #90caf9; margin: 8px 0 0; font-size: 0.95rem; }
-
-/* تبويبات مخصصة */
-.stTabs [data-baseweb="tab-list"] { gap: 8px; }
-.stTabs [data-baseweb="tab"] {
-    background: #1a1e2e;
-    border-radius: 10px;
-    border: 1px solid #2e3250;
-    color: #8892b0;
-    font-family: 'Tajawal', sans-serif;
-    font-weight: 600;
-}
-.stTabs [aria-selected="true"] {
-    background: linear-gradient(135deg, #1a237e, #1565c0) !important;
-    color: white !important;
-    border-color: #1565c0 !important;
-}
-
-/* إشعار إجازة */
-.vacation-notice {
-    background: #0d1f3c;
-    border: 1px solid #1d4ed8;
-    border-right: 4px solid #60a5fa;
-    border-radius: 10px;
-    padding: 12px 16px;
-    color: #93c5fd;
-    font-size: 0.9rem;
-    margin-bottom: 8px;
-}
+.person-name  { font-weight: 700; font-size: 1rem; color: #e0e6ff; }
+.person-paid  { font-size: 0.85rem; color: #7ecfb3; }
+.badge-green  { background:#0d3b2e;color:#4ade80;border:1px solid #166534;border-radius:20px;padding:4px 14px;font-weight:700;font-size:0.85rem; }
+.badge-red    { background:#3b0d0d;color:#f87171;border:1px solid #991b1b;border-radius:20px;padding:4px 14px;font-weight:700;font-size:0.85rem; }
+.badge-vacation{background:#1a2e3b;color:#60a5fa;border:1px solid #1d4ed8;border-radius:20px;padding:4px 14px;font-weight:700;font-size:0.85rem;}
+.badge-zero   { background:#2a2a2a;color:#aaa;border:1px solid #444;border-radius:20px;padding:4px 14px;font-weight:700;font-size:0.85rem; }
+.whatsapp-box { background:#0a1a0f;border:1px solid #166534;border-radius:12px;padding:20px;
+    font-family:'Tajawal',monospace;white-space:pre-wrap;color:#4ade80;font-size:0.95rem;direction:rtl; }
+.app-header { background:linear-gradient(135deg,#1a237e 0%,#283593 50%,#1565c0 100%);
+    border-radius:20px;padding:30px;text-align:center;margin-bottom:30px;
+    box-shadow:0 8px 32px rgba(26,35,126,0.4); }
+.app-header h1 { color:white;font-size:2rem;font-weight:800;margin:0; }
+.app-header p  { color:#90caf9;margin:8px 0 0;font-size:0.95rem; }
+.stTabs [data-baseweb="tab-list"] { gap:8px; }
+.stTabs [data-baseweb="tab"] { background:#1a1e2e;border-radius:10px;border:1px solid #2e3250;
+    color:#8892b0;font-family:'Tajawal',sans-serif;font-weight:600; }
+.stTabs [aria-selected="true"] { background:linear-gradient(135deg,#1a237e,#1565c0)!important;
+    color:white!important;border-color:#1565c0!important; }
+.vacation-notice { background:#0d1f3c;border:1px solid #1d4ed8;border-right:4px solid #60a5fa;
+    border-radius:10px;padding:12px 16px;color:#93c5fd;font-size:0.9rem;margin-bottom:8px; }
+.info-box { background:#0d1f3c;border:1px solid #1d4ed8;border-radius:10px;
+    padding:14px 18px;color:#93c5fd;margin-bottom:20px; }
+.rule-box { background:#1a1a0d;border:1px solid #854d0e;border-radius:10px;
+    padding:14px 18px;color:#fde047;margin-bottom:20px;font-size:0.9rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -156,7 +68,7 @@ html, body, [class*="css"] {
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
 SCRIPT_URL    = "https://script.google.com/macros/s/AKfycbxdbKpbajXkRUFsAhSJMuxlW7_etBpq05Kx8B_zWQ2I4C3VTxZVAMyM0mtAvFHighCU/exec"
 
-SHABAB = [
+DEFAULT_SHABAB = [
     "أبو عمار على شهبور",
     "أبو أحمد تامر حيدر",
     "أبو فهد عبد الرحمن",
@@ -172,8 +84,68 @@ MONTHS_AR = {
 }
 
 # ─────────────────────────────────────────────
-#  العنوان الرئيسي
+#  تحميل الأشخاص من Sheets (مع fallback)
 # ─────────────────────────────────────────────
+@st.cache_data(ttl=120)
+def load_persons():
+    try:
+        resp = requests.get(SCRIPT_URL + "?type=persons", timeout=10)
+        data = resp.json()
+        if data:
+            return sorted([d["name"] for d in data],
+                          key=lambda x: next((d["order"] for d in data if d["name"]==x), 99))
+    except:
+        pass
+    return DEFAULT_SHABAB.copy()
+
+# ─────────────────────────────────────────────
+#  تحميل الإجازات من Sheets
+# ─────────────────────────────────────────────
+@st.cache_data(ttl=60)
+def load_vacations_from_sheet():
+    try:
+        resp   = requests.get(SCRIPT_URL + "?type=vacations", timeout=10)
+        data   = resp.json()
+        result = {}
+        for row in data:
+            m = row["month"]; n = row["name"]
+            if m not in result: result[m] = {}
+            entry = {"type": row["vtype"]}
+            if row.get("days"):      entry["days"]          = int(row["days"])
+            if row.get("vacDate"):   entry["date"]           = _parse_date(row["vacDate"])
+            if row.get("deductAmt"): entry["deduct_amount"]  = float(row["deductAmt"])
+            result[m][n] = entry
+        return result
+    except:
+        return {}
+
+def _parse_date(val):
+    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y"):
+        try: return datetime.strptime(str(val), fmt).date()
+        except: pass
+    return None
+
+# ─────────────────────────────────────────────
+#  تحميل المصاريف
+# ─────────────────────────────────────────────
+@st.cache_data(ttl=60)
+def load_data():
+    try:
+        df = pd.read_csv(f"{SHEET_CSV_URL}&cachebust={datetime.now().timestamp()}")
+        df["_row"] = range(2, len(df) + 2)
+        return df
+    except:
+        return pd.DataFrame(columns=["الشهر","الاسم","المبلغ","البيان","التاريخ","الصورة","_row"])
+
+def call_script(payload):
+    try:
+        return requests.post(SCRIPT_URL, data=payload, timeout=30).text
+    except Exception as e:
+        return f"Error: {e}"
+
+# ═══════════════════════════════════════════════
+#  العنوان
+# ═══════════════════════════════════════════════
 st.markdown("""
 <div class="app-header">
     <h1>🏠 نظام مصاريف السكن</h1>
@@ -184,168 +156,167 @@ st.markdown("""
 # ─────────────────────────────────────────────
 #  تحميل البيانات
 # ─────────────────────────────────────────────
-@st.cache_data(ttl=60)
-def load_data():
-    try:
-        url = f"{SHEET_CSV_URL}&cachebust={datetime.now().timestamp()}"
-        df  = pd.read_csv(url)
-        return df
-    except:
-        return pd.DataFrame(columns=["الشهر","الاسم","المبلغ","البيان","التاريخ","الصورة"])
+SHABAB          = load_persons()
+all_data        = load_data()
+sheet_vacations = load_vacations_from_sheet()
 
-all_data = load_data()
+if "vacations" not in st.session_state:
+    st.session_state.vacations = sheet_vacations.copy()
 
 # ─────────────────────────────────────────────
 #  شريط الإعدادات العلوي
 # ─────────────────────────────────────────────
-current_date    = datetime.now()
-month_opts_en   = [datetime(2026, m, 1).strftime("%B %Y") for m in range(1, 13)]
-month_opts_ar   = [f"{MONTHS_AR[m.split()[0]]} {m.split()[1]}" for m in month_opts_en]
+current_date  = datetime.now()
+month_opts_en = [datetime(2026, m, 1).strftime("%B %Y") for m in range(1, 13)]
+month_opts_ar = [f"{MONTHS_AR[m.split()[0]]} {m.split()[1]}" for m in month_opts_en]
 
-c1, c2, c3 = st.columns([2, 1, 1])
+c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
 with c1:
     selected_month_ar = st.selectbox("📅 الشهر", month_opts_ar, index=current_date.month - 1)
 with c2:
-    rent_val = st.number_input("💰 إيجار الفرد", min_value=0.0, value=42.165, format="%.3f")
+    total_rent_input = st.number_input(
+        "🏠 إجمالي الإيجار الكلي", min_value=0.0, value=250.0, format="%.3f",
+        help="يُقسَّم بالتساوي على جميع الأشخاص بدون استثناء"
+    )
 with c3:
-    # استخراج رقم الشهر والسنة
-    month_idx  = month_opts_ar.index(selected_month_ar)
-    sel_month  = month_idx + 1
-    sel_year   = 2026
+    month_idx     = month_opts_ar.index(selected_month_ar)
+    sel_month     = month_idx + 1
+    sel_year      = 2026
     days_in_month = calendar.monthrange(sel_year, sel_month)[1]
     st.metric("📆 أيام الشهر", days_in_month)
+with c4:
+    if st.button("🔄 تحديث"):
+        st.cache_data.clear()
+        st.rerun()
 
+# قاعدة التوزيع
+st.markdown("""
+<div class="rule-box">
+⚠️ <b>قاعدة التوزيع:</b>
+الإيجار يُقسَّم بالتساوي على <b>جميع الأشخاص</b> بدون استثناء حتى من في إجازة. |
+المصاريف المشتركة تُوزَّع على <b>المتواجدين فقط</b> حسب نسبة حضورهم.
+</div>
+""", unsafe_allow_html=True)
 st.divider()
 
 # ─────────────────────────────────────────────
-#  نظام الإجازات – Session State
+#  الإجازات للشهر
 # ─────────────────────────────────────────────
-if "vacations" not in st.session_state:
-    st.session_state.vacations = {}   # {month_ar: {person: {...}}}
-
 month_vacations = st.session_state.vacations.get(selected_month_ar, {})
 
 # ─────────────────────────────────────────────
-#  دالة حساب نسبة الإجازة
+#  دالة نسبة الحضور (للمصاريف فقط)
 # ─────────────────────────────────────────────
-def calc_vacation_ratio(vac_info: dict, days_in_month: int, sel_year: int, sel_month: int) -> float:
+def calc_expense_ratio(vac_info, days_in_month, sel_year, sel_month):
     """
-    ترجع نسبة المشاركة في المصاريف (0.0 → 1.0).
+    نسبة مشاركة الشخص في المصاريف المشتركة (0.0 → 1.0).
+    الإيجار لا يتأثر بهذه النسبة.
     """
     vtype = vac_info.get("type", "none")
     if vtype == "full":
         return 0.0
     elif vtype == "from_start":
-        absent_days = int(vac_info.get("days", 0))
-        absent_days = min(absent_days, days_in_month)
-        return max(0.0, (days_in_month - absent_days) / days_in_month)
+        absent = min(int(vac_info.get("days", 0)), days_in_month)
+        return max(0.0, (days_in_month - absent) / days_in_month)
     elif vtype == "from_date":
         vac_date = vac_info.get("date")
         if vac_date:
-            start = date(sel_year, sel_month, 1)
-            absent_days = (vac_date - start).days
-            absent_days = max(0, absent_days)
-            present_days = min(absent_days, days_in_month)
-            return present_days / days_in_month
+            present = max(0, (vac_date - date(sel_year, sel_month, 1)).days)
+            return min(present, days_in_month) / days_in_month
         return 1.0
     elif vtype == "deduct":
-        return 1.0   # سيُطبَّق الخصم لاحقاً
-    else:
-        return 1.0
+        return 1.0   # يشارك كامل لكن يُخصم مبلغ لاحقاً
+    return 1.0
 
 # ─────────────────────────────────────────────
-#  حساب الملخص
+#  الحسابات الرئيسية
 # ─────────────────────────────────────────────
 month_df    = all_data[all_data["الشهر"] == selected_month_ar] if not all_data.empty else pd.DataFrame()
 total_extra = pd.to_numeric(month_df["المبلغ"], errors='coerce').sum() if not month_df.empty else 0.0
 
-# حساب المقام الفعلي (مجموع نسب المشاركة)
-total_ratio = 0.0
-ratios      = {}
-deduct_map  = {}
+# نسب الحضور للمصاريف
+expense_ratios = {}
+deduct_map     = {}
+total_ratio    = 0.0
 for person in SHABAB:
-    vac = month_vacations.get(person, {})
-    ratio = calc_vacation_ratio(vac, days_in_month, sel_year, sel_month)
-    ratios[person]   = ratio
-    total_ratio     += ratio
-    deduct_map[person] = float(vac.get("deduct_amount", 0)) if vac.get("type") == "deduct" else 0.0
+    vac  = month_vacations.get(person, {})
+    r    = calc_expense_ratio(vac, days_in_month, sel_year, sel_month)
+    expense_ratios[person] = r
+    total_ratio           += r
+    deduct_map[person]     = float(vac.get("deduct_amount", 0)) if vac.get("type") == "deduct" else 0.0
 
-# المصاريف المشتركة المُوزَّعة
-def get_share(person):
-    """حصة الشخص من المصاريف المشتركة"""
+# الإيجار: ثابت على الجميع
+rent_per_person = total_rent_input / len(SHABAB) if SHABAB else 0.0
+
+# حصة الشخص من المصاريف المشتركة
+def get_expense_share(person):
     if total_ratio == 0:
         return 0.0
     vac = month_vacations.get(person, {})
     if vac.get("type") == "deduct":
-        # يشارك كامل مطروحاً منه مبلغ ثابت
-        base_share = (total_extra / len(SHABAB))
-        return max(0.0, base_share - deduct_map[person])
-    return (ratios[person] / total_ratio) * total_extra
+        base = (expense_ratios[person] / total_ratio) * total_extra
+        return max(0.0, base - deduct_map[person])
+    return (expense_ratios[person] / total_ratio) * total_extra
 
 summary = []
 for person in SHABAB:
-    paid  = pd.to_numeric(month_df[month_df["الاسم"] == person]["المبلغ"], errors='coerce').sum() if not month_df.empty else 0.0
-    share = get_share(person) + (rent_val * ratios[person])
-    balance = paid - share
-    vac     = month_vacations.get(person, {})
+    paid          = pd.to_numeric(month_df[month_df["الاسم"] == person]["المبلغ"], errors='coerce').sum() if not month_df.empty else 0.0
+    exp_share     = get_expense_share(person)
+    total_due     = exp_share + rent_per_person   # الإيجار ثابت دائماً
+    balance       = paid - total_due
+    vac           = month_vacations.get(person, {})
     summary.append({
-        "الاسم":       person,
-        "مدفوع":       paid,
-        "المستحق":     share,
-        "الرصيد":      balance,
-        "إجازة":       vac.get("type", "none"),
-        "النسبة":      ratios[person],
+        "الاسم":         person,
+        "مدفوع":         paid,
+        "حصة_مصاريف":   exp_share,
+        "إيجار":         rent_per_person,
+        "المستحق":       total_due,
+        "الرصيد":        balance,
+        "إجازة":         vac.get("type", "none"),
+        "النسبة":        expense_ratios[person],
     })
+
+active_count = sum(1 for p in SHABAB if expense_ratios[p] > 0)
 
 # ─────────────────────────────────────────────
 #  التبويبات
 # ─────────────────────────────────────────────
-tab1, tab2, tab3, tab4 = st.tabs(["📊 الملخص والتوزيع", "➕ إضافة مصروف", "🏖️ إدارة الإجازات", "📜 سجل المصاريف"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "📊 الملخص", "➕ إضافة مصروف", "🏖️ الإجازات", "📜 السجل", "⚙️ إدارة الأشخاص"
+])
 
 # ══════════════════════════════════════════════
 #  تبويب ١: الملخص
 # ══════════════════════════════════════════════
 with tab1:
-    # بطاقات إحصاء
-    s1, s2, s3, s4 = st.columns(4)
+    s1, s2, s3, s4, s5 = st.columns(5)
     with s1:
-        st.markdown(f"""<div class="stat-card">
-            <div class="value">{total_extra:.3f}</div>
-            <div class="label">💰 إجمالي المصاريف</div>
-        </div>""", unsafe_allow_html=True)
+        st.markdown(f'<div class="stat-card"><div class="value">{total_extra:.3f}</div><div class="label">💰 إجمالي المصاريف</div></div>', unsafe_allow_html=True)
     with s2:
-        total_rent = rent_val * sum(ratios.values())
-        st.markdown(f"""<div class="stat-card">
-            <div class="value">{total_rent:.3f}</div>
-            <div class="label">🏠 إجمالي الإيجار</div>
-        </div>""", unsafe_allow_html=True)
+        st.markdown(f'<div class="stat-card"><div class="value">{total_rent_input:.3f}</div><div class="label">🏠 إجمالي الإيجار</div></div>', unsafe_allow_html=True)
     with s3:
-        grand_total = total_extra + total_rent
-        st.markdown(f"""<div class="stat-card">
-            <div class="value">{grand_total:.3f}</div>
-            <div class="label">📊 الإجمالي الكلي</div>
-        </div>""", unsafe_allow_html=True)
+        st.markdown(f'<div class="stat-card"><div class="value">{rent_per_person:.3f}</div><div class="label">👤 إيجار الفرد</div></div>', unsafe_allow_html=True)
     with s4:
-        active_count = sum(1 for p in SHABAB if ratios[p] > 0)
-        st.markdown(f"""<div class="stat-card">
-            <div class="value">{active_count}/{len(SHABAB)}</div>
-            <div class="label">👥 المشاركون الفعليون</div>
-        </div>""", unsafe_allow_html=True)
+        grand_total = total_extra + total_rent_input
+        st.markdown(f'<div class="stat-card"><div class="value">{grand_total:.3f}</div><div class="label">📊 الإجمالي الكلي</div></div>', unsafe_allow_html=True)
+    with s5:
+        st.markdown(f'<div class="stat-card"><div class="value">{active_count}/{len(SHABAB)}</div><div class="label">👥 حاضرون (للمصاريف)</div></div>', unsafe_allow_html=True)
 
-    st.markdown("### 👥 وضع كل شخص")
+    st.markdown(f"### 👥 وضع كل شخص")
     for row in summary:
         bal   = row["الرصيد"]
         vtype = row["إجازة"]
 
-        if vtype not in ("none",) and vtype:
+        # تفاصيل الإجازة
+        if vtype and vtype != "none":
             vac_labels = {
-                "full":       "🏖️ إجازة كاملة",
-                "from_start": f"🗓️ غياب {days_in_month - round(ratios[row['الاسم']]*days_in_month)} يوم",
-                "from_date":  "📅 إجازة من تاريخ",
-                "deduct":     "➖ خصم مبلغ",
+                "full":       f"🏖️ إجازة كاملة (إيجار: {rent_per_person:.3f})",
+                "from_start": f"🗓️ نسبة مصاريف {row['النسبة']*100:.0f}% + إيجار كامل",
+                "from_date":  f"📅 نسبة مصاريف {row['النسبة']*100:.0f}% + إيجار كامل",
+                "deduct":     f"➖ خصم مبلغ من المصاريف + إيجار كامل",
             }
             vac_text = vac_labels.get(vtype, "")
-            badge = f'<span class="badge-vacation">{vac_text} • نسبة {row["النسبة"]*100:.0f}%</span>'
+            badge = f'<span class="badge-vacation">{vac_text}</span>'
         elif abs(bal) < 0.01:
             badge = '<span class="badge-zero">➖ صفر</span>'
         elif bal > 0:
@@ -353,38 +324,38 @@ with tab1:
         else:
             badge = f'<span class="badge-red">🔴 عليه {abs(bal):.3f}</span>'
 
+        details = f"دفع: {row['مدفوع']:.3f} | مصاريف: {row['حصة_مصاريف']:.3f} | إيجار: {row['إيجار']:.3f} | المستحق: {row['المستحق']:.3f}"
         st.markdown(f"""
         <div class="person-row">
             <span class="person-name">{row['الاسم']}</span>
-            <span class="person-paid">دفع: {row['مدفوع']:.3f} | مستحق: {row['المستحق']:.3f}</span>
+            <span class="person-paid">{details}</span>
             {badge}
-        </div>
-        """, unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
 
-    # ── تقرير واتساب ──
+    # تقرير الواتساب
     st.markdown("### 📱 تقرير الواتساب")
-    report_lines = [
+    lines = [
         f"*تقرير مصاريف السكن – {selected_month_ar}*",
-        f"🏠 إيجار الفرد: {rent_val:.3f}",
-        f"💰 إجمالي المصاريف: {total_extra:.3f}",
+        f"🏠 الإيجار الكلي: {total_rent_input:.3f} (على كل فرد: {rent_per_person:.3f})",
+        f"💰 إجمالي المصاريف المشتركة: {total_extra:.3f}",
+        f"📊 الإجمالي الكلي: {total_extra + total_rent_input:.3f}",
         "─────────────────",
     ]
     for row in summary:
-        bal   = row["الرصيد"]
-        vtype = row["إجازة"]
+        bal    = row["الرصيد"]
+        vtype  = row["إجازة"]
         status = "له 🟢" if bal > 0 else ("عليه 🔴" if bal < 0 else "صفر ➖")
-        vac_note = ""
+        note   = ""
         if vtype == "full":
-            vac_note = " (إجازة كاملة)"
-        elif vtype in ("from_start","from_date"):
-            vac_note = f" (نسبة {row['النسبة']*100:.0f}%)"
+            note = " (إجازة – بدون مصاريف مشتركة)"
+        elif vtype in ("from_start", "from_date"):
+            note = f" (مصاريف {row['النسبة']*100:.0f}%)"
         elif vtype == "deduct":
-            vac_note = " (خصم خاص)"
-        report_lines.append(f"• {row['الاسم']}{vac_note}: {status} *{abs(bal):.3f}*")
+            note = " (خصم من المصاريف)"
+        lines.append(f"• {row['الاسم']}{note}: {status} *{abs(bal):.3f}*")
 
-    report_text = "\n".join(report_lines)
+    report_text = "\n".join(lines)
     st.markdown(f'<div class="whatsapp-box">{report_text}</div>', unsafe_allow_html=True)
-    st.button("📋 نسخ التقرير", on_click=lambda: st.write(""), help="انسخ النص أعلاه يدوياً")
 
 # ══════════════════════════════════════════════
 #  تبويب ٢: إضافة مصروف
@@ -394,86 +365,82 @@ with tab2:
     with col_form:
         st.subheader("➕ تسجيل مصروف جديد")
         with st.form("add_form", clear_on_submit=True):
-            name   = st.selectbox("من دفع؟", SHABAB)
-            amount = st.number_input("المبلغ", min_value=0.0, step=0.1, format="%.3f")
-            note   = st.text_input("البيان", placeholder="مثال: شاي، سكر، أنبوبة، صابون…")
+            name         = st.selectbox("من دفع؟", SHABAB)
+            amount       = st.number_input("المبلغ", min_value=0.0, step=0.1, format="%.3f")
+            note         = st.text_input("البيان", placeholder="مثال: شاي، سكر، أنبوبة…")
             expense_date = st.date_input("التاريخ", value=date.today())
             uploaded_img = st.file_uploader("📸 صورة الفاتورة (اختياري)", type=["png","jpg","jpeg"])
-            submit = st.form_submit_button("✅ تسجيل المصروف", use_container_width=True)
+            submit       = st.form_submit_button("✅ تسجيل", use_container_width=True)
 
             if submit:
                 if amount > 0:
-                    img_base64 = ""
-                    img_name   = ""
+                    img_base64, img_name = "", ""
                     if uploaded_img:
                         img_name = uploaded_img.name
                         try:
                             image = Image.open(uploaded_img)
-                            if image.mode in ("RGBA","P"):
-                                image = image.convert("RGB")
+                            if image.mode in ("RGBA","P"): image = image.convert("RGB")
                             image.thumbnail((800, 800))
                             buf = io.BytesIO()
                             image.save(buf, format="JPEG", quality=70)
                             img_base64 = base64.b64encode(buf.getvalue()).decode()
-                        except Exception as e:
-                            st.error(f"خطأ في الصورة: {e}")
+                        except Exception as ex:
+                            st.error(f"خطأ في الصورة: {ex}")
 
-                    payload = {
-                        "month": selected_month_ar, "name": name, "amount": amount,
-                        "note": note, "date": str(expense_date),
-                        "imgData": img_base64, "imgName": img_name,
-                    }
-                    try:
-                        with st.spinner("جاري الحفظ…"):
-                            resp = requests.post(SCRIPT_URL, data=payload, timeout=30)
-                        if "Success" in resp.text:
-                            st.success("✅ تم التسجيل بنجاح!")
-                            st.balloons()
-                            st.cache_data.clear()
-                            st.rerun()
-                        else:
-                            st.error(f"رد الخادم: {resp.text}")
-                    except Exception as e:
-                        st.error(f"❌ فشل الاتصال: {e}")
+                    with st.spinner("جاري الحفظ…"):
+                        result = call_script({
+                            "action": "addExpense",
+                            "month": selected_month_ar, "name": name,
+                            "amount": amount, "note": note, "date": str(expense_date),
+                            "imgData": img_base64, "imgName": img_name,
+                        })
+                    if "Success" in result:
+                        st.success("✅ تم التسجيل!")
+                        st.balloons()
+                        st.cache_data.clear()
+                        st.rerun()
+                    else:
+                        st.error(f"رد الخادم: {result}")
                 else:
                     st.warning("⚠️ أدخل مبلغاً صحيحاً.")
 
     with col_recent:
         st.subheader("🕐 آخر المصاريف")
         if not month_df.empty:
-            recent = month_df.tail(5).iloc[::-1]
-            for _, row in recent.iterrows():
+            for _, row in month_df.tail(6).iloc[::-1].iterrows():
                 st.info(f"**{row['الاسم']}** | {float(row['المبلغ']):.3f} | {row['البيان']}")
         else:
             st.info("لا توجد مصاريف بعد.")
 
 # ══════════════════════════════════════════════
-#  تبويب ٣: إدارة الإجازات
+#  تبويب ٣: الإجازات (تؤثر على المصاريف فقط)
 # ══════════════════════════════════════════════
 with tab3:
     st.subheader(f"🏖️ إدارة الإجازات – {selected_month_ar}")
     st.markdown("""
-    <div style="background:#0d1f3c;border:1px solid #1d4ed8;border-radius:10px;padding:14px 18px;color:#93c5fd;margin-bottom:20px;">
-    💡 <strong>كيف يعمل النظام؟</strong><br>
-    • <b>إجازة كاملة</b>: لا يُحسب عليه شيء من المصاريف أو الإيجار.<br>
-    • <b>غياب من أول الشهر X أيام</b>: يُحسب بنسبة الأيام الحاضرة.<br>
-    • <b>إجازة من تاريخ معين</b>: يُحسب فقط على الأيام قبل الإجازة.<br>
-    • <b>خصم مبلغ ثابت</b>: يشارك كامل لكن يُخصم منه مبلغ محدد.
+    <div class="info-box">
+    💡 <b>تذكير:</b> الإجازة تؤثر على <u>المصاريف المشتركة فقط</u>.<br>
+    الإيجار يبقى ثابتاً على <b>جميع الأشخاص</b> بغض النظر عن الإجازة.
+    <br><br>
+    • <b>إجازة كاملة</b>: لا يُحسب عليه شيء من المصاريف المشتركة (الإيجار يبقى).<br>
+    • <b>غياب من أول الشهر X أيام</b>: يُحسب عليه من المصاريف بنسبة أيام حضوره.<br>
+    • <b>إجازة من تاريخ</b>: يُحسب عليه المصاريف قبل الإجازة فقط.<br>
+    • <b>خصم مبلغ ثابت</b>: يشارك كامل في المصاريف لكن يُخصم منه مبلغ معين.
     </div>
     """, unsafe_allow_html=True)
 
     for person in SHABAB:
         with st.expander(f"⚙️ {person}", expanded=False):
-            vac = month_vacations.get(person, {})
+            vac   = month_vacations.get(person, {})
             vtype = st.radio(
                 "نوع الإجازة",
                 options=["none","full","from_start","from_date","deduct"],
                 format_func=lambda x: {
-                    "none":       "✅ لا توجد إجازة – يشارك كامل",
-                    "full":       "🏖️ إجازة كاملة – لا يُحسب عليه شيء",
-                    "from_start": "🗓️ غياب عدد أيام من أول الشهر",
-                    "from_date":  "📅 إجازة من تاريخ معين حتى نهاية الشهر",
-                    "deduct":     "➖ خصم مبلغ ثابت من حصته",
+                    "none":       "✅ لا توجد إجازة – يشارك كامل في المصاريف",
+                    "full":       "🏖️ إجازة كاملة – بدون مصاريف مشتركة (الإيجار يبقى)",
+                    "from_start": "🗓️ غياب من أول الشهر – نسبة حضور من المصاريف",
+                    "from_date":  "📅 إجازة من تاريخ – مصاريف الأيام الحاضرة فقط",
+                    "deduct":     "➖ خصم مبلغ ثابت من حصته في المصاريف",
                 }[x],
                 index=["none","full","from_start","from_date","deduct"].index(vac.get("type","none")),
                 key=f"vtype_{person}",
@@ -481,89 +448,99 @@ with tab3:
 
             extra = {}
             if vtype == "from_start":
-                absent_days = st.number_input(
+                absent = st.number_input(
                     "عدد أيام الغياب من أول الشهر",
                     min_value=1, max_value=days_in_month, step=1,
-                    value=int(vac.get("days", 1)),
-                    key=f"days_{person}",
+                    value=int(vac.get("days", 1)), key=f"days_{person}"
                 )
-                present = days_in_month - absent_days
-                ratio   = present / days_in_month
-                st.info(f"سيشارك {present} يوماً من {days_in_month} يوماً → نسبة {ratio*100:.1f}%")
-                extra["days"] = absent_days
+                present = days_in_month - absent
+                st.info(f"✅ من المصاريف: {present}/{days_in_month} يوم → نسبة {present/days_in_month*100:.1f}%  |  🏠 الإيجار: {rent_per_person:.3f} (كامل)")
+                extra["days"] = absent
 
             elif vtype == "from_date":
-                vac_date_val = vac.get("date") or date(sel_year, sel_month, 15)
+                vd = vac.get("date") or date(sel_year, sel_month, 15)
                 vac_date = st.date_input(
                     "تاريخ بداية الإجازة",
-                    value=vac_date_val,
+                    value=vd,
                     min_value=date(sel_year, sel_month, 1),
                     max_value=date(sel_year, sel_month, days_in_month),
-                    key=f"vdate_{person}",
+                    key=f"vdate_{person}"
                 )
-                present = (vac_date - date(sel_year, sel_month, 1)).days
-                present = max(0, min(present, days_in_month))
-                ratio   = present / days_in_month
-                st.info(f"حاضر {present} يوماً قبل الإجازة → نسبة {ratio*100:.1f}%")
+                present = max(0, min((vac_date - date(sel_year, sel_month, 1)).days, days_in_month))
+                st.info(f"✅ من المصاريف: {present}/{days_in_month} يوم → نسبة {present/days_in_month*100:.1f}%  |  🏠 الإيجار: {rent_per_person:.3f} (كامل)")
                 extra["date"] = vac_date
 
             elif vtype == "deduct":
                 ded = st.number_input(
-                    "المبلغ الثابت المخصوم من حصته",
+                    "المبلغ المخصوم من حصته في المصاريف",
                     min_value=0.0, step=0.5, format="%.3f",
-                    value=float(vac.get("deduct_amount", 0.0)),
-                    key=f"ded_{person}",
+                    value=float(vac.get("deduct_amount", 0.0)), key=f"ded_{person}"
                 )
+                st.info(f"✅ يشارك كامل في المصاريف مع خصم {ded:.3f}  |  🏠 الإيجار: {rent_per_person:.3f} (كامل)")
                 extra["deduct_amount"] = ded
 
+            elif vtype == "full":
+                st.info(f"🏖️ لا يُحسب عليه أي مصاريف مشتركة  |  🏠 الإيجار: {rent_per_person:.3f} (كامل)")
+
             if st.button(f"💾 حفظ إعدادات {person}", key=f"save_{person}"):
+                # تحديث session_state
                 if selected_month_ar not in st.session_state.vacations:
                     st.session_state.vacations[selected_month_ar] = {}
                 if vtype == "none":
                     st.session_state.vacations[selected_month_ar].pop(person, None)
                 else:
                     st.session_state.vacations[selected_month_ar][person] = {"type": vtype, **extra}
-                st.success(f"✅ تم حفظ إعدادات {person}")
-                st.rerun()
 
-    # ملخص الإجازات الحالية
+                # حفظ في Sheets
+                with st.spinner("حفظ في Sheets…"):
+                    result = call_script({
+                        "action":    "saveVacation",
+                        "month":     selected_month_ar,
+                        "name":      person,
+                        "vtype":     vtype,
+                        "days":      extra.get("days", ""),
+                        "vacDate":   str(extra.get("date", "")),
+                        "deductAmt": extra.get("deduct_amount", ""),
+                    })
+                if "Success" in result:
+                    st.success(f"✅ تم حفظ إجازة {person}")
+                    st.cache_data.clear()
+                    st.rerun()
+                else:
+                    st.error(f"رد الخادم: {result}")
+
     if month_vacations:
         st.divider()
-        st.markdown("**📋 الإجازات المسجلة لهذا الشهر:**")
+        st.markdown("**📋 الإجازات المسجلة هذا الشهر:**")
         for person, vac in month_vacations.items():
-            vtype = vac.get("type","")
-            if vtype == "full":
-                desc = "إجازة كاملة"
-            elif vtype == "from_start":
-                desc = f"غياب {vac.get('days',0)} يوم من أول الشهر"
-            elif vtype == "from_date":
-                desc = f"إجازة من {vac.get('date','')}"
-            elif vtype == "deduct":
-                desc = f"خصم {vac.get('deduct_amount',0):.3f}"
-            else:
-                desc = ""
-            st.markdown(f'<div class="vacation-notice">🏖️ <strong>{person}</strong>: {desc}</div>', unsafe_allow_html=True)
+            vtype = vac.get("type", "")
+            desc_map = {
+                "full":       "إجازة كاملة (بدون مصاريف)",
+                "from_start": f"غياب {vac.get('days',0)} يوم من أول الشهر",
+                "from_date":  f"إجازة من {vac.get('date','')}",
+                "deduct":     f"خصم {vac.get('deduct_amount',0):.3f} من المصاريف",
+            }
+            desc = desc_map.get(vtype, "")
+            st.markdown(f'<div class="vacation-notice">🏖️ <strong>{person}</strong>: {desc} | 🏠 الإيجار ثابت: {rent_per_person:.3f}</div>', unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
-#  تبويب ٤: سجل المصاريف
+#  تبويب ٤: سجل المصاريف (تعديل + حذف)
 # ══════════════════════════════════════════════
 with tab4:
     st.subheader(f"📜 سجل مصاريف {selected_month_ar}")
-
-    # فلتر بالاسم
     filter_name = st.selectbox("فلتر باسم", ["الكل"] + SHABAB, key="filter_name")
-
-    display_df = month_df if not month_df.empty else pd.DataFrame()
+    display_df  = month_df.copy() if not month_df.empty else pd.DataFrame()
     if filter_name != "الكل" and not display_df.empty:
         display_df = display_df[display_df["الاسم"] == filter_name]
 
     if not display_df.empty:
-        # إجمالي المُصفَّى
         filtered_total = pd.to_numeric(display_df["المبلغ"], errors='coerce').sum()
         st.metric("إجمالي المبالغ المعروضة", f"{filtered_total:.3f}")
 
         for idx, row in display_df.iloc[::-1].iterrows():
             amount_val = float(row["المبلغ"]) if pd.notna(row["المبلغ"]) else 0.0
+            row_num    = int(row["_row"]) if "_row" in row else None
+
             with st.expander(f"📌 {row['الاسم']}  |  {amount_val:.3f}  |  {row['البيان']}"):
                 col_a, col_b = st.columns(2)
                 col_a.write(f"**التاريخ:** {row['التاريخ']}")
@@ -572,16 +549,107 @@ with tab4:
                 if img_link.startswith("http"):
                     col_b.link_button("🖼️ فتح صورة الفاتورة", img_link)
                 else:
-                    col_b.caption("⚠️ لا توجد صورة مرفوعة")
+                    col_b.caption("⚠️ لا توجد صورة")
+
+                if row_num:
+                    st.markdown("---")
+                    ec1, ec2 = st.columns(2)
+
+                    with ec1:
+                        st.markdown("**✏️ تعديل**")
+                        new_amount = st.number_input("المبلغ الجديد", value=amount_val,
+                                                      format="%.3f", key=f"edit_amt_{idx}")
+                        new_note   = st.text_input("البيان الجديد", value=str(row['البيان']),
+                                                    key=f"edit_note_{idx}")
+                        new_date   = st.text_input("التاريخ الجديد", value=str(row['التاريخ']),
+                                                    key=f"edit_date_{idx}")
+                        if st.button("💾 حفظ التعديل", key=f"save_edit_{idx}"):
+                            with st.spinner("تعديل…"):
+                                res = call_script({
+                                    "action": "editExpense", "row": row_num,
+                                    "amount": new_amount, "note": new_note, "date": new_date,
+                                })
+                            if "Success" in res:
+                                st.success("✅ تم التعديل!")
+                                st.cache_data.clear()
+                                st.rerun()
+                            else:
+                                st.error(res)
+
+                    with ec2:
+                        st.markdown("**🗑️ حذف**")
+                        st.warning("لا يمكن التراجع عن الحذف!")
+                        if st.button("🗑️ حذف هذا المصروف", key=f"del_{idx}", type="primary"):
+                            with st.spinner("حذف…"):
+                                res = call_script({"action": "deleteExpense", "row": row_num})
+                            if "Success" in res:
+                                st.success("✅ تم الحذف!")
+                                st.cache_data.clear()
+                                st.rerun()
+                            else:
+                                st.error(res)
     else:
         st.info("لا توجد مصاريف مسجلة لهذا الشهر.")
 
-    # ── إجماليات لكل فرد
     if not month_df.empty:
         st.divider()
-        st.markdown("**📊 إجماليات كل شخص هذا الشهر:**")
+        st.markdown("**📊 إجماليات كل شخص:**")
         cols = st.columns(3)
         for i, person in enumerate(SHABAB):
-            total_person = pd.to_numeric(month_df[month_df["الاسم"] == person]["المبلغ"], errors='coerce').sum()
+            total_p = pd.to_numeric(month_df[month_df["الاسم"] == person]["المبلغ"], errors='coerce').sum()
             with cols[i % 3]:
-                st.metric(person, f"{total_person:.3f}")
+                st.metric(person, f"{total_p:.3f}")
+
+# ══════════════════════════════════════════════
+#  تبويب ٥: إدارة الأشخاص
+# ══════════════════════════════════════════════
+with tab5:
+    st.subheader("⚙️ إدارة قائمة الأشخاص")
+    st.markdown("""
+    <div class="info-box">
+    💡 إضافة أو حذف شخص يؤثر على توزيع الإيجار فوراً (الإيجار ÷ عدد الأشخاص).
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("### 👥 الأشخاص الحاليون")
+    for person in SHABAB:
+        pc1, pc2 = st.columns([4, 1])
+        pc1.markdown(f"🔹 **{person}**")
+        if pc2.button("🗑️ حذف", key=f"delperson_{person}"):
+            with st.spinner(f"حذف {person}…"):
+                res = call_script({"action": "deletePerson", "name": person})
+            if "Success" in res:
+                st.success(f"✅ تم حذف {person}")
+                st.cache_data.clear()
+                st.rerun()
+            else:
+                st.error(res)
+
+    st.divider()
+    st.markdown("### ➕ إضافة شخص جديد")
+    with st.form("add_person_form", clear_on_submit=True):
+        new_person = st.text_input("اسم الشخص الجديد", placeholder="مثال: أبو علي محمد الغامدي")
+        add_btn    = st.form_submit_button("➕ إضافة", use_container_width=True)
+        if add_btn:
+            if new_person.strip():
+                if new_person.strip() in SHABAB:
+                    st.warning("⚠️ هذا الشخص موجود مسبقاً!")
+                else:
+                    with st.spinner("إضافة…"):
+                        res = call_script({"action": "addPerson", "name": new_person.strip()})
+                    if "Success" in res:
+                        st.success(f"✅ تمت إضافة {new_person}")
+                        st.cache_data.clear()
+                        st.rerun()
+                    else:
+                        st.error(res)
+            else:
+                st.warning("⚠️ أدخل اسماً صحيحاً.")
+
+    st.divider()
+    st.markdown("""
+    <div style="background:#1a1a2e;border:1px solid #4a4a8a;border-radius:10px;padding:14px;color:#a0a0c0;font-size:0.9rem;">
+    ⚠️ <b>خطوة مهمة:</b> عند أول استخدام، شغّل <code>initSheets()</code> في Apps Script
+    لإنشاء شيتات الإجازات والأشخاص تلقائياً.
+    </div>
+    """, unsafe_allow_html=True)
