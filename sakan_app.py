@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import requests
+import base64
 from datetime import datetime
 
 # إعدادات الصفحة
@@ -15,10 +16,8 @@ MONTHS_AR = {"January": "يناير", "February": "فبراير", "March": "ما
 
 st.title("🏠 نظام مصاريف السكن (إعداد أبو زين)")
 
-# وظيفة تحميل البيانات مع تخطي الكاش عند الحاجة
 def load_data():
     try:
-        # إضافة timestamp للرابط لضمان جلب أحدث بيانات من جوجل
         url = f"{SHEET_CSV_URL}&cachebust={datetime.now().timestamp()}"
         df = pd.read_csv(url)
         return df
@@ -27,7 +26,7 @@ def load_data():
 
 all_data = load_data()
 
-# --- شريط التحكم العلوي ---
+# التحكم العلوي
 col_top1, col_top2 = st.columns(2)
 with col_top1:
     current_date = datetime.now()
@@ -40,7 +39,7 @@ with col_top2:
 
 st.divider()
 
-# --- واجهة الإدخال والحسابات ---
+# الإدخال والحسابات
 month_df = all_data[all_data["الشهر"] == selected_month_ar]
 col1, col2 = st.columns([1, 2])
 
@@ -50,60 +49,69 @@ with col1:
         name = st.selectbox("من دفع؟", SHABAB)
         amount = st.number_input("المبلغ:", min_value=0.0, step=0.1, format="%.3f")
         note = st.text_input("البيان:", placeholder="مثال: أنبوبة، منظفات")
-        uploaded_img = st.file_uploader("📸 صورة الفاتورة (اختياري):", type=['png', 'jpg', 'jpeg'])
+        uploaded_img = st.file_uploader("📸 رفع صورة الفاتورة:", type=['png', 'jpg', 'jpeg'])
         submit = st.form_submit_button("تسجيل المصروف")
         
         if submit:
             if amount > 0:
-                params = {
-                    "month": selected_month_ar,
-                    "name": name,
-                    "amount": amount,
-                    "note": note,
-                    "date": datetime.now().strftime("%Y-%m-%d"),
-                    "img": "يوجد صورة" if uploaded_img else "بدون صورة"
+                img_base64 = ""
+                img_name = ""
+                if uploaded_img is not None:
+                    img_name = uploaded_img.name
+                    # تحويل ملف الصورة لنص مشفر ليتم نقله لجوجل درايف
+                    img_base64 = base64.b64encode(uploaded_img.read()).decode('utf-8')
+                
+                payload = {
+                    "month": selected_month_ar, "name": name, "amount": amount,
+                    "note": note, "date": datetime.now().strftime("%Y-%m-%d"),
+                    "imgData": img_base64, "imgName": img_name
                 }
+                
                 try:
-                    response = requests.get(SCRIPT_URL, params=params)
-                    if response.status_code == 200:
-                        st.success(f"✅ تم التسجيل بنجاح!")
+                    # نستخدم POST لدعم الملفات الكبيرة
+                    with st.spinner("جاري رفع الفاتورة وتسجيل المصروف..."):
+                        response = requests.post(SCRIPT_URL, data=payload)
+                    if "Success" in response.text:
+                        st.success("✅ تم تسجيل المصروف ورفع الفاتورة بنجاح!")
                         st.balloons()
-                        st.rerun() # إعادة تشغيل لتحديث البيانات فوراً
+                        st.rerun()
                     else:
-                        st.error("خطأ في الاتصال بالـ Script.")
+                        st.error(f"استجاب السيرفر بـ: {response.text}")
                 except:
-                    st.error("فشل الإرسال. تأكد من نشر الـ Script كـ Anyone.")
-            else:
-                st.warning("يرجى إدخال مبلغ.")
+                    st.error("فشل الاتصال بالخادم السحابي.")
 
 with col2:
     st.subheader(f"📊 تصفية {selected_month_ar}")
     total_extra = pd.to_numeric(month_df["المبلغ"], errors='coerce').sum()
-    fair_share_extra = total_extra / len(SHABAB) if total_extra > 0 else 0
-    
+    fair_extra = total_extra / len(SHABAB) if total_extra > 0 else 0
     summary = []
     for person in SHABAB:
         paid = pd.to_numeric(month_df[month_df["الاسم"] == person]["المبلغ"], errors='coerce').sum()
-        balance = paid - (fair_share_extra + rent_val)
+        balance = paid - (fair_extra + rent_val)
         status = "🟢 له" if balance > 0 else "🔴 عليه"
         summary.append({"الاسم": person, "مدفوع": f"{paid:.3f}", "الوضع": status, "المبلغ": f"{abs(balance):.3f}"})
     st.table(summary)
 
-# --- سجل المصروفات التفصيلي ---
+# --- سجل المصروفات المطور لعرض الصور وروابطها ---
 st.divider()
 st.subheader(f"📜 سجل مصاريف {selected_month_ar}")
 if not month_df.empty:
-    # عرض سجل مرتب من الأحدث للأقدم
-    display_df = month_df[["الاسم", "المبلغ", "البيان", "التاريخ", "الصورة"]].iloc[::-1]
-    st.dataframe(display_df, use_container_width=True, hide_index=True)
+    for idx, row in month_df.iloc[::-1].iterrows():
+        with st.expander(f"📌 {row['الاسم']} | {row['المبلغ']:.3f} | {row['البيان']}"):
+            st.write(f"**التاريخ:** {row['التاريخ']}")
+            img_link = str(row['الصورة']).strip()
+            
+            if img_link.startswith("http"):
+                # عرض زر مباشر لفتح الصورة المحفوظة في جوجل درايف
+                st.link_button("🔗 اضغط هنا لفتح وعرض صورة الفاتورة", img_link)
+            else:
+                st.warning("⚠️ لا توجد صورة مرفوعة لهذا المصروف.")
 else:
-    st.info("لا توجد مصاريف مسجلة لهذا الشهر حتى الآن.")
+    st.info("لا توجد مصاريف مسجلة.")
 
-# --- تقرير الواتساب ---
 st.divider()
 st.subheader("📱 تقرير الواتساب")
-report = f"*تقرير مصاريف السكن - {selected_month_ar}*\n🏠 الإيجار للفرد: {rent_val:.3f}\n💰 إجمالي النثريات: {total_extra:.3f}\n"
-report += f"{'─'*15}\n"
+report = f"*تقرير مصاريف السكن - {selected_month_ar}*\n🏠 الإيجار: {rent_val:.3f}\n💰 النثريات: {total_extra:.3f}\n"
 for item in summary:
     report += f"• {item['الاسم']}: {item['الوضع']} *{item['المبلغ']}*\n"
 st.code(report)
