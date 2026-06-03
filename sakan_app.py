@@ -84,7 +84,7 @@ with col1:
                 }
                 
                 try:
-                    with st.spinner("جاري ضغط الفاتورة ورفعها للسيرفر السحابي..."):
+                    with st.spinner("جاري تسجيل المصروف..."):
                         # إرسال الطلب كـ POST لضمان استقبال البيانات
                         response = requests.post(SCRIPT_URL, data=payload)
                     
