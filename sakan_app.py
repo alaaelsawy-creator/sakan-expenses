@@ -36,7 +36,7 @@ all_data = get_data()
 rent_data = get_rent()
 
 # --- الشريط العلوي ---
-st.title("🏠 نظام مصاريف السكن (نسخة جوجل شيت)")
+st.title("🏠 نظام مصاريف السكن (إعداد أبو زين)")
 
 col_a, col_b = st.columns(2)
 with col_a:
