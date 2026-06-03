@@ -19,18 +19,29 @@ st.title("🏠 نظام مصاريف السكن (إعداد أبو زين)")
 @st.cache_data(ttl=5)
 def load_data():
     try:
-        return pd.read_csv(SHEET_CSV_URL)
+        df = pd.read_csv(SHEET_CSV_URL)
+        return df
     except:
         return pd.DataFrame(columns=["الشهر", "الاسم", "المبلغ", "البيان", "التاريخ", "الصورة"])
 
 all_data = load_data()
 
-# اختيار الشهر
-current_date = datetime.now()
-month_options_en = [datetime(2026, m, 1).strftime("%B %Y") for m in range(1, 13)]
-month_options_ar = [f"{MONTHS_AR[m.split()[0]]} {m.split()[1]}" for m in month_options_en]
-selected_month_ar = st.selectbox("📅 اختر الشهر:", month_options_ar, index=current_date.month - 1)
+# --- شريط التحكم العلوي ---
+col_top1, col_top2 = st.columns(2)
 
+with col_top1:
+    current_date = datetime.now()
+    month_options_en = [datetime(2026, m, 1).strftime("%B %Y") for m in range(1, 13)]
+    month_options_ar = [f"{MONTHS_AR[m.split()[0]]} {m.split()[1]}" for m in month_options_en]
+    selected_month_ar = st.selectbox("📅 اختر الشهر:", month_options_ar, index=current_date.month - 1)
+
+with col_top2:
+    # خانة الإيجار المتغير
+    rent_val = st.number_input(f"💰 قيمة إيجار الفرد لشهر {selected_month_ar}:", min_value=0.0, value=42.165, format="%.3f", step=0.100)
+
+st.divider()
+
+# --- واجهة الإدخال والحسابات ---
 month_df = all_data[all_data["الشهر"] == selected_month_ar]
 col1, col2 = st.columns([1, 2])
 
@@ -64,24 +75,31 @@ with col1:
                 except:
                     st.error("فشل الإرسال. تأكد من إعدادات الـ Script.")
             else:
-                st.warning("يرجى إدخال مبلغ.")
+                st.warning("يرجى إدخال مبلغ صحيح.")
 
 with col2:
     st.subheader(f"📊 تصفية {selected_month_ar}")
     total_extra = pd.to_numeric(month_df["المبلغ"], errors='coerce').sum()
-    rent_val = 42.165 
     
     summary = []
+    num_shabab = len(SHABAB)
+    fair_share_extra = total_extra / num_shabab if total_extra > 0 else 0
+    
     for person in SHABAB:
         paid = pd.to_numeric(month_df[month_df["الاسم"] == person]["المبلغ"], errors='coerce').sum()
-        balance = paid - ((total_extra / len(SHABAB)) + rent_val)
+        # الحسبة: ما دفعه الشخص - (نصيبه من المصاريف النثرية + الإيجار المدخل في الخانة)
+        balance = paid - (fair_share_extra + rent_val)
         status = "🟢 له" if balance > 0 else "🔴 عليه"
-        summary.append({"الاسم": person, "الوضع": status, "المبلغ": f"{abs(balance):.3f}"})
+        summary.append({"الاسم": person, "مدفوع": f"{paid:.3f}", "الوضع": status, "المبلغ": f"{abs(balance):.3f}"})
+    
     st.table(summary)
 
 # تقرير الواتساب
 st.divider()
-report = f"*تقرير مصاريف السكن - {selected_month_ar}*\n🏠 الإيجار: {rent_val:.3f}\n💰 إجمالي المصاريف: {total_extra:.3f}\n"
+st.subheader("📱 تقرير الواتساب (جاهز للنسخ)")
+report = f"*تقرير مصاريف السكن - {selected_month_ar}*\n"
+report += f"🏠 الإيجار للفرد: {rent_val:.3f}\n"
+report += f"💰 إجمالي المصاريف الأخرى: {total_extra:.3f}\n"
 report += f"{'─'*15}\n"
 for item in summary:
     report += f"• {item['الاسم']}: {item['الوضع']} *{item['المبلغ']}*\n"
