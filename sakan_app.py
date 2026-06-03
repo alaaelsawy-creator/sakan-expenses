@@ -15,11 +15,12 @@ MONTHS_AR = {"January": "يناير", "February": "فبراير", "March": "ما
 
 st.title("🏠 نظام مصاريف السكن (إعداد أبو زين)")
 
-# تحميل البيانات
-@st.cache_data(ttl=5)
+# وظيفة تحميل البيانات مع تخطي الكاش عند الحاجة
 def load_data():
     try:
-        df = pd.read_csv(SHEET_CSV_URL)
+        # إضافة timestamp للرابط لضمان جلب أحدث بيانات من جوجل
+        url = f"{SHEET_CSV_URL}&cachebust={datetime.now().timestamp()}"
+        df = pd.read_csv(url)
         return df
     except:
         return pd.DataFrame(columns=["الشهر", "الاسم", "المبلغ", "البيان", "التاريخ", "الصورة"])
@@ -28,7 +29,6 @@ all_data = load_data()
 
 # --- شريط التحكم العلوي ---
 col_top1, col_top2 = st.columns(2)
-
 with col_top1:
     current_date = datetime.now()
     month_options_en = [datetime(2026, m, 1).strftime("%B %Y") for m in range(1, 13)]
@@ -36,8 +36,7 @@ with col_top1:
     selected_month_ar = st.selectbox("📅 اختر الشهر:", month_options_ar, index=current_date.month - 1)
 
 with col_top2:
-    # خانة الإيجار المتغير
-    rent_val = st.number_input(f"💰 قيمة إيجار الفرد لشهر {selected_month_ar}:", min_value=0.0, value=42.165, format="%.3f", step=0.100)
+    rent_val = st.number_input(f"💰 إيجار الفرد ({selected_month_ar}):", min_value=0.0, value=42.165, format="%.3f")
 
 st.divider()
 
@@ -67,39 +66,43 @@ with col1:
                 try:
                     response = requests.get(SCRIPT_URL, params=params)
                     if response.status_code == 200:
-                        st.success(f"✅ تم التسجيل بنجاح يا {name.split()[0]}!")
+                        st.success(f"✅ تم التسجيل بنجاح!")
                         st.balloons()
-                        st.cache_data.clear()
+                        st.rerun() # إعادة تشغيل لتحديث البيانات فوراً
                     else:
-                        st.error("خطأ في الاتصال بالخادم.")
+                        st.error("خطأ في الاتصال بالـ Script.")
                 except:
-                    st.error("فشل الإرسال. تأكد من إعدادات الـ Script.")
+                    st.error("فشل الإرسال. تأكد من نشر الـ Script كـ Anyone.")
             else:
-                st.warning("يرجى إدخال مبلغ صحيح.")
+                st.warning("يرجى إدخال مبلغ.")
 
 with col2:
     st.subheader(f"📊 تصفية {selected_month_ar}")
     total_extra = pd.to_numeric(month_df["المبلغ"], errors='coerce').sum()
+    fair_share_extra = total_extra / len(SHABAB) if total_extra > 0 else 0
     
     summary = []
-    num_shabab = len(SHABAB)
-    fair_share_extra = total_extra / num_shabab if total_extra > 0 else 0
-    
     for person in SHABAB:
         paid = pd.to_numeric(month_df[month_df["الاسم"] == person]["المبلغ"], errors='coerce').sum()
-        # الحسبة: ما دفعه الشخص - (نصيبه من المصاريف النثرية + الإيجار المدخل في الخانة)
         balance = paid - (fair_share_extra + rent_val)
         status = "🟢 له" if balance > 0 else "🔴 عليه"
         summary.append({"الاسم": person, "مدفوع": f"{paid:.3f}", "الوضع": status, "المبلغ": f"{abs(balance):.3f}"})
-    
     st.table(summary)
 
-# تقرير الواتساب
+# --- سجل المصروفات التفصيلي ---
 st.divider()
-st.subheader("📱 تقرير الواتساب (جاهز للنسخ)")
-report = f"*تقرير مصاريف السكن - {selected_month_ar}*\n"
-report += f"🏠 الإيجار للفرد: {rent_val:.3f}\n"
-report += f"💰 إجمالي المصاريف الأخرى: {total_extra:.3f}\n"
+st.subheader(f"📜 سجل مصاريف {selected_month_ar}")
+if not month_df.empty:
+    # عرض سجل مرتب من الأحدث للأقدم
+    display_df = month_df[["الاسم", "المبلغ", "البيان", "التاريخ", "الصورة"]].iloc[::-1]
+    st.dataframe(display_df, use_container_width=True, hide_index=True)
+else:
+    st.info("لا توجد مصاريف مسجلة لهذا الشهر حتى الآن.")
+
+# --- تقرير الواتساب ---
+st.divider()
+st.subheader("📱 تقرير الواتساب")
+report = f"*تقرير مصاريف السكن - {selected_month_ar}*\n🏠 الإيجار للفرد: {rent_val:.3f}\n💰 إجمالي النثريات: {total_extra:.3f}\n"
 report += f"{'─'*15}\n"
 for item in summary:
     report += f"• {item['الاسم']}: {item['الوضع']} *{item['المبلغ']}*\n"
