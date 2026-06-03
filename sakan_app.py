@@ -15,16 +15,15 @@ MONTHS_AR = {"January": "يناير", "February": "فبراير", "March": "ما
 
 st.title("🏠 نظام مصاريف السكن (إعداد أبو زين)")
 
-# تحميل البيانات (للعرض فقط)
-@st.cache_data(ttl=5) # تحديث البيانات كل 5 ثوانٍ
+# تحميل البيانات
+@st.cache_data(ttl=5)
 def load_data():
-    return pd.read_csv(SHEET_CSV_URL)
+    try:
+        return pd.read_csv(SHEET_CSV_URL)
+    except:
+        return pd.DataFrame(columns=["الشهر", "الاسم", "المبلغ", "البيان", "التاريخ", "الصورة"])
 
-try:
-    all_data = load_data()
-except:
-    st.error("جاري الاتصال بقاعدة البيانات...")
-    st.stop()
+all_data = load_data()
 
 # اختيار الشهر
 current_date = datetime.now()
@@ -46,7 +45,6 @@ with col1:
         
         if submit:
             if amount > 0:
-                # إرسال البيانات عبر الـ Web App Script
                 params = {
                     "month": selected_month_ar,
                     "name": name,
@@ -60,13 +58,13 @@ with col1:
                     if response.status_code == 200:
                         st.success(f"✅ تم التسجيل بنجاح يا {name.split()[0]}!")
                         st.balloons()
-                        st.cache_data.clear() # مسح الكاش لتحديث الجدول فوراً
+                        st.cache_data.clear()
                     else:
-                        st.error("حدث خطأ في الاتصال بالخادم.")
+                        st.error("خطأ في الاتصال بالخادم.")
                 except:
-                    st.error("فشل إرسال البيانات. تأكد من إعدادات الـ Script.")
+                    st.error("فشل الإرسال. تأكد من إعدادات الـ Script.")
             else:
-                st.warning("يرجى إدخال مبلغ أكبر من صفر.")
+                st.warning("يرجى إدخال مبلغ.")
 
 with col2:
     st.subheader(f"📊 تصفية {selected_month_ar}")
@@ -76,6 +74,15 @@ with col2:
     summary = []
     for person in SHABAB:
         paid = pd.to_numeric(month_df[month_df["الاسم"] == person]["المبلغ"], errors='coerce').sum()
-        # الحسبة: المدفوع - (نصيبه من المصاريف + الإيجار الثابت)
         balance = paid - ((total_extra / len(SHABAB)) + rent_val)
-        status = "🟢 له
+        status = "🟢 له" if balance > 0 else "🔴 عليه"
+        summary.append({"الاسم": person, "الوضع": status, "المبلغ": f"{abs(balance):.3f}"})
+    st.table(summary)
+
+# تقرير الواتساب
+st.divider()
+report = f"*تقرير مصاريف السكن - {selected_month_ar}*\n🏠 الإيجار: {rent_val:.3f}\n💰 إجمالي المصاريف: {total_extra:.3f}\n"
+report += f"{'─'*15}\n"
+for item in summary:
+    report += f"• {item['الاسم']}: {item['الوضع']} *{item['المبلغ']}*\n"
+st.code(report)
