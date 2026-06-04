@@ -191,10 +191,15 @@ c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
 with c1:
     selected_month_ar = st.selectbox("📅 الشهر", month_opts_ar, index=current_date.month - 1)
 with c2:
-    _saved_rent = float(sheet_settings.get("total_rent", 250.0))
+    # تحميل الإيجار: session_state له الأولوية، ثم Sheets، ثم الافتراضي
+    if "total_rent" not in st.session_state:
+        st.session_state.total_rent = float(sheet_settings.get("total_rent", 250.0))
     total_rent_input = st.number_input(
-        "🏠 إجمالي الإيجار الكلي", min_value=0.0, value=_saved_rent, format="%.3f",
-        help="يُقسَّم بالتساوي على جميع الأشخاص بدون استثناء"
+        "🏠 إجمالي الإيجار الكلي", min_value=0.0,
+        value=st.session_state.total_rent,
+        format="%.3f",
+        help="يُقسَّم بالتساوي على جميع الأشخاص بدون استثناء",
+        key="rent_input"
     )
 with c3:
     month_idx     = month_opts_ar.index(selected_month_ar)
@@ -205,15 +210,23 @@ with c3:
 with c4:
     if st.button("🔄 تحديث"):
         st.cache_data.clear()
+        st.session_state.pop("total_rent", None)
         st.rerun()
 
-# حفظ الإيجار إذا تغيّر
-if total_rent_input != float(sheet_settings.get("total_rent", 250.0)):
-    if st.button("💾 حفظ قيمة الإيجار", type="primary"):
+# حفظ الإيجار تلقائياً عند التغيير
+if total_rent_input != st.session_state.total_rent:
+    st.session_state.total_rent = total_rent_input
+
+_sheet_rent = float(sheet_settings.get("total_rent", 250.0))
+if total_rent_input != _sheet_rent:
+    rc1, rc2 = st.columns([3, 1])
+    rc1.info(f"💡 قيمة الإيجار تغيّرت من {_sheet_rent:.3f} إلى {total_rent_input:.3f} — اضغط حفظ لتثبيتها.")
+    if rc2.button("💾 حفظ الإيجار", type="primary"):
         res = call_script({"action": "saveSetting", "key": "total_rent", "value": total_rent_input})
         if "Success" in res:
             st.success(f"✅ تم حفظ الإيجار: {total_rent_input:.3f}")
             st.cache_data.clear()
+            st.session_state.total_rent = total_rent_input
             st.rerun()
         else:
             st.error(res)
@@ -694,7 +707,7 @@ with tab5:
     st.divider()
     st.markdown("### ➕ إضافة شخص جديد")
     with st.form("add_person_form", clear_on_submit=True):
-        new_person = st.text_input("اسم الشخص الجديد", placeholder="مثال: أبو علي محمد إبراهيم")
+        new_person = st.text_input("اسم الشخص الجديد", placeholder="مثال: أبو عمر محمد السيد")
         add_btn    = st.form_submit_button("➕ إضافة", use_container_width=True)
         if add_btn:
             if new_person.strip():
