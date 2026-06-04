@@ -119,11 +119,11 @@ def load_vacations_from_sheet():
     except:
         return {}
 
-@st.cache_data(ttl=60)
 def load_settings():
+    """دائماً تجلب الإعدادات من Sheets بدون cache"""
     try:
         resp = requests.get(SCRIPT_URL + "?type=settings", timeout=10)
-        return resp.json()   # {"total_rent": "250.000", ...}
+        return resp.json()
     except:
         return {}
 
@@ -191,15 +191,13 @@ c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
 with c1:
     selected_month_ar = st.selectbox("📅 الشهر", month_opts_ar, index=current_date.month - 1)
 with c2:
-    # تحميل الإيجار: session_state له الأولوية، ثم Sheets، ثم الافتراضي
-    if "total_rent" not in st.session_state:
-        st.session_state.total_rent = float(sheet_settings.get("total_rent", 250.0))
+    # القيمة المحفوظة في Sheets
+    _saved_rent = float(sheet_settings.get("total_rent", 250.0))
     total_rent_input = st.number_input(
         "🏠 إجمالي الإيجار الكلي", min_value=0.0,
-        value=st.session_state.total_rent,
+        value=_saved_rent,
         format="%.3f",
-        help="يُقسَّم بالتساوي على جميع الأشخاص بدون استثناء",
-        key="rent_input"
+        help="يُقسَّم بالتساوي على جميع الأشخاص بدون استثناء"
     )
 with c3:
     month_idx     = month_opts_ar.index(selected_month_ar)
@@ -208,28 +206,16 @@ with c3:
     days_in_month = calendar.monthrange(sel_year, sel_month)[1]
     st.metric("📆 أيام الشهر", days_in_month)
 with c4:
-    if st.button("🔄 تحديث"):
-        st.cache_data.clear()
-        st.session_state.pop("total_rent", None)
-        st.rerun()
-
-# حفظ الإيجار تلقائياً عند التغيير
-if total_rent_input != st.session_state.total_rent:
-    st.session_state.total_rent = total_rent_input
-
-_sheet_rent = float(sheet_settings.get("total_rent", 250.0))
-if total_rent_input != _sheet_rent:
-    rc1, rc2 = st.columns([3, 1])
-    rc1.info(f"💡 قيمة الإيجار تغيّرت من {_sheet_rent:.3f} إلى {total_rent_input:.3f} — اضغط حفظ لتثبيتها.")
-    if rc2.button("💾 حفظ الإيجار", type="primary"):
+    if st.button("💾 حفظ الإيجار", type="primary"):
         res = call_script({"action": "saveSetting", "key": "total_rent", "value": total_rent_input})
         if "Success" in res:
-            st.success(f"✅ تم حفظ الإيجار: {total_rent_input:.3f}")
             st.cache_data.clear()
-            st.session_state.total_rent = total_rent_input
             st.rerun()
         else:
             st.error(res)
+    if st.button("🔄 تحديث"):
+        st.cache_data.clear()
+        st.rerun()
 
 # قاعدة التوزيع
 st.markdown("""
