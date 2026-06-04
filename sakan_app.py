@@ -191,14 +191,21 @@ c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
 with c1:
     selected_month_ar = st.selectbox("📅 الشهر", month_opts_ar, index=current_date.month - 1)
 with c2:
-    # القيمة المحفوظة في Sheets
-    _saved_rent = float(sheet_settings.get("total_rent", 250.0))
+    # تحميل الإيجار من Sheets مرة واحدة في session_state
+    if "rent_initialized" not in st.session_state:
+        st.session_state.saved_rent = float(sheet_settings.get("total_rent", 250.0))
+        st.session_state.rent_initialized = True
+
+    # ربط الـ widget بـ session_state مباشرة عبر key
+    if "rent_widget" not in st.session_state:
+        st.session_state["rent_widget"] = st.session_state.saved_rent
     total_rent_input = st.number_input(
         "🏠 إجمالي الإيجار الكلي", min_value=0.0,
-        value=_saved_rent,
         format="%.3f",
-        help="يُقسَّم بالتساوي على جميع الأشخاص بدون استثناء"
+        key="rent_widget"
     )
+    st.session_state.saved_rent = st.session_state["rent_widget"]
+
 with c3:
     month_idx     = month_opts_ar.index(selected_month_ar)
     sel_month     = month_idx + 1
@@ -207,13 +214,14 @@ with c3:
     st.metric("📆 أيام الشهر", days_in_month)
 with c4:
     if st.button("💾 حفظ الإيجار", type="primary"):
-        res = call_script({"action": "saveSetting", "key": "total_rent", "value": total_rent_input})
+        res = call_script({"action": "saveSetting", "key": "total_rent",
+                           "value": str(st.session_state.saved_rent)})
         if "Success" in res:
-            st.cache_data.clear()
-            st.rerun()
+            st.success(f"✅ {st.session_state.saved_rent:.3f}")
         else:
             st.error(res)
     if st.button("🔄 تحديث"):
+        st.session_state.pop("rent_initialized", None)
         st.cache_data.clear()
         st.rerun()
 
