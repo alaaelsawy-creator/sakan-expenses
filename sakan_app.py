@@ -193,12 +193,12 @@ with c1:
 with c2:
     # تحميل الإيجار من Sheets مرة واحدة في session_state
     if "rent_initialized" not in st.session_state:
-        st.session_state.saved_rent = float(sheet_settings.get("total_rent", 250.0))
+        st.session_state.saved_rent = float(sheet_settings.get("total_rent", 253.0))
         st.session_state.rent_initialized = True
 
     # ربط الـ widget بـ session_state مباشرة عبر key
     if "rent_widget" not in st.session_state:
-        st.session_state["rent_widget"] = st.session_state.saved_rent
+        st.session_state["rent_widget"] = st.session_state.saved_rent  # افتراضي: 253.0
     total_rent_input = st.number_input(
         "🏠 إجمالي الإيجار الكلي", min_value=0.0,
         format="%.3f",
