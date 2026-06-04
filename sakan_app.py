@@ -132,10 +132,18 @@ def _parse_date(val):
 def load_data():
     try:
         df = pd.read_csv(f"{SHEET_CSV_URL}&cachebust={datetime.now().timestamp()}")
+        # _row = رقم الصف الحقيقي في Sheets (صف 1 = headers، البيانات من صف 2)
         df["_row"] = range(2, len(df) + 2)
+        # rowId = معرّف فريد مركّب من بيانات الصف للبحث الدقيق في Sheets
+        df["_rowId"] = (
+            df["الشهر"].astype(str) + "|" +
+            df["الاسم"].astype(str) + "|" +
+            df["المبلغ"].astype(str) + "|" +
+            df["التاريخ"].astype(str)
+        )
         return df
     except:
-        return pd.DataFrame(columns=["الشهر","الاسم","المبلغ","البيان","التاريخ","الصورة","_row"])
+        return pd.DataFrame(columns=["الشهر","الاسم","المبلغ","البيان","التاريخ","الصورة","_row","_rowId"])
 
 def call_script(payload):
     try:
@@ -356,6 +364,7 @@ with tab1:
 
     report_text = "\n".join(lines)
     st.markdown(f'<div class="whatsapp-box">{report_text}</div>', unsafe_allow_html=True)
+    st.button("📋 نسخ التقرير", help="انسخ النص أعلاه يدوياً")
 
 # ══════════════════════════════════════════════
 #  تبويب ٢: إضافة مصروف
@@ -533,13 +542,19 @@ with tab4:
     if filter_name != "الكل" and not display_df.empty:
         display_df = display_df[display_df["الاسم"] == filter_name]
 
+    # حذف صفوف الإجازات (لا تملك مبلغاً صحيحاً أو اسم بيان)
+    if not display_df.empty:
+        display_df = display_df[pd.to_numeric(display_df["المبلغ"], errors='coerce').notna()]
+        display_df = display_df[pd.to_numeric(display_df["المبلغ"], errors='coerce') > 0]
+
     if not display_df.empty:
         filtered_total = pd.to_numeric(display_df["المبلغ"], errors='coerce').sum()
         st.metric("إجمالي المبالغ المعروضة", f"{filtered_total:.3f}")
 
         for idx, row in display_df.iloc[::-1].iterrows():
             amount_val = float(row["المبلغ"]) if pd.notna(row["المبلغ"]) else 0.0
-            row_num    = int(row["_row"]) if "_row" in row else None
+            row_num    = int(row["_row"])   if "_row"   in row else None
+            row_id     = str(row["_rowId"]) if "_rowId" in row else ""
 
             with st.expander(f"📌 {row['الاسم']}  |  {amount_val:.3f}  |  {row['البيان']}"):
                 col_a, col_b = st.columns(2)
@@ -566,7 +581,7 @@ with tab4:
                         if st.button("💾 حفظ التعديل", key=f"save_edit_{idx}"):
                             with st.spinner("تعديل…"):
                                 res = call_script({
-                                    "action": "editExpense", "row": row_num,
+                                    "action": "editExpense", "row": row_num, "rowId": row_id,
                                     "amount": new_amount, "note": new_note, "date": new_date,
                                 })
                             if "Success" in res:
@@ -581,7 +596,7 @@ with tab4:
                         st.warning("لا يمكن التراجع عن الحذف!")
                         if st.button("🗑️ حذف هذا المصروف", key=f"del_{idx}", type="primary"):
                             with st.spinner("حذف…"):
-                                res = call_script({"action": "deleteExpense", "row": row_num})
+                                res = call_script({"action": "deleteExpense", "row": row_num, "rowId": row_id})
                             if "Success" in res:
                                 st.success("✅ تم الحذف!")
                                 st.cache_data.clear()
@@ -613,9 +628,38 @@ with tab5:
 
     st.markdown("### 👥 الأشخاص الحاليون")
     for person in SHABAB:
-        pc1, pc2 = st.columns([4, 1])
+        pc1, pc2, pc3 = st.columns([3, 1, 1])
         pc1.markdown(f"🔹 **{person}**")
-        if pc2.button("🗑️ حذف", key=f"delperson_{person}"):
+
+        # زر تعديل الاسم
+        if pc2.button("✏️ تعديل", key=f"editbtn_{person}"):
+            st.session_state[f"editing_{person}"] = True
+
+        if st.session_state.get(f"editing_{person}", False):
+            with st.form(key=f"rename_form_{person}"):
+                new_name = st.text_input("الاسم الجديد", value=person, key=f"newname_{person}")
+                sc1, sc2 = st.columns(2)
+                save_rename = sc1.form_submit_button("💾 حفظ")
+                cancel_rename = sc2.form_submit_button("❌ إلغاء")
+                if save_rename:
+                    if new_name.strip() and new_name.strip() != person:
+                        with st.spinner("تعديل الاسم…"):
+                            res = call_script({"action": "renamePerson", "oldName": person, "newName": new_name.strip()})
+                        if "Success" in res:
+                            st.success(f"✅ تم تغيير الاسم إلى {new_name}")
+                            st.session_state.pop(f"editing_{person}", None)
+                            st.cache_data.clear()
+                            st.rerun()
+                        else:
+                            st.error(res)
+                    else:
+                        st.warning("⚠️ أدخل اسماً مختلفاً.")
+                if cancel_rename:
+                    st.session_state.pop(f"editing_{person}", None)
+                    st.rerun()
+
+        # زر حذف
+        if pc3.button("🗑️ حذف", key=f"delperson_{person}"):
             with st.spinner(f"حذف {person}…"):
                 res = call_script({"action": "deletePerson", "name": person})
             if "Success" in res:
@@ -645,11 +689,3 @@ with tab5:
                         st.error(res)
             else:
                 st.warning("⚠️ أدخل اسماً صحيحاً.")
-
-    st.divider()
-    st.markdown("""
-    <div style="background:#1a1a2e;border:1px solid #4a4a8a;border-radius:10px;padding:14px;color:#a0a0c0;font-size:0.9rem;">
-    ⚠️ <b>خطوة مهمة:</b> عند أول استخدام، شغّل <code>initSheets()</code> في Apps Script
-    لإنشاء شيتات الإجازات والأشخاص تلقائياً.
-    </div>
-    """, unsafe_allow_html=True)
