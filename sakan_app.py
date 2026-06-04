@@ -119,6 +119,14 @@ def load_vacations_from_sheet():
     except:
         return {}
 
+@st.cache_data(ttl=60)
+def load_settings():
+    try:
+        resp = requests.get(SCRIPT_URL + "?type=settings", timeout=10)
+        return resp.json()   # {"total_rent": "250.000", ...}
+    except:
+        return {}
+
 def _parse_date(val):
     for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y"):
         try: return datetime.strptime(str(val), fmt).date()
@@ -167,6 +175,7 @@ st.markdown("""
 SHABAB          = load_persons()
 all_data        = load_data()
 sheet_vacations = load_vacations_from_sheet()
+sheet_settings  = load_settings()
 
 if "vacations" not in st.session_state:
     st.session_state.vacations = sheet_vacations.copy()
@@ -182,8 +191,9 @@ c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
 with c1:
     selected_month_ar = st.selectbox("📅 الشهر", month_opts_ar, index=current_date.month - 1)
 with c2:
+    _saved_rent = float(sheet_settings.get("total_rent", 250.0))
     total_rent_input = st.number_input(
-        "🏠 إجمالي الإيجار الكلي", min_value=0.0, value=250.0, format="%.3f",
+        "🏠 إجمالي الإيجار الكلي", min_value=0.0, value=_saved_rent, format="%.3f",
         help="يُقسَّم بالتساوي على جميع الأشخاص بدون استثناء"
     )
 with c3:
@@ -196,6 +206,17 @@ with c4:
     if st.button("🔄 تحديث"):
         st.cache_data.clear()
         st.rerun()
+
+# حفظ الإيجار إذا تغيّر
+if total_rent_input != float(sheet_settings.get("total_rent", 250.0)):
+    if st.button("💾 حفظ قيمة الإيجار", type="primary"):
+        res = call_script({"action": "saveSetting", "key": "total_rent", "value": total_rent_input})
+        if "Success" in res:
+            st.success(f"✅ تم حفظ الإيجار: {total_rent_input:.3f}")
+            st.cache_data.clear()
+            st.rerun()
+        else:
+            st.error(res)
 
 # قاعدة التوزيع
 st.markdown("""
@@ -673,7 +694,7 @@ with tab5:
     st.divider()
     st.markdown("### ➕ إضافة شخص جديد")
     with st.form("add_person_form", clear_on_submit=True):
-        new_person = st.text_input("اسم الشخص الجديد", placeholder="مثال: أبو علي محمد الغامدي")
+        new_person = st.text_input("اسم الشخص الجديد", placeholder="مثال: أبو علي محمد إبراهيم")
         add_btn    = st.form_submit_button("➕ إضافة", use_container_width=True)
         if add_btn:
             if new_person.strip():
