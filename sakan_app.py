@@ -66,7 +66,7 @@ html, body, [class*="css"] { font-family: 'Tajawal', sans-serif !important; dire
 #  الثوابت
 # ─────────────────────────────────────────────
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT_URL    = "https://script.google.com/macros/s/AKfycbzzQAVp2mhqlnzWzxPEhVgoX_vtYzh_B4ukxCTjFHM0Uxe8LItU6bQ7ZLt4_ISS2orp/exec"
+SCRIPT_URL    = "https://script.google.com/macros/s/AKfycbwVgBMm8XnWrKEP72diYG_DBQZpG8fJ4oXjEVZ2Dg06ZD-XNe8SQykA4cn3tAwQM_Fg/exec"
 
 MONTHS_AR = {
     "January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
