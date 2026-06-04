@@ -65,8 +65,8 @@ html, body, [class*="css"] { font-family: 'Tajawal', sans-serif !important; dire
 # ─────────────────────────────────────────────
 #  الثوابت
 # ─────────────────────────────────────────────
-SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT_URL    = "https://script.google.com/macros/s/AKfycbxdbKpbajXkRUFsAhSJMuxlW7_etBpq05Kx8B_zWQ2I4C3VTxZVAMyM0mtAvFHighCU/exec"
+SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/edit?pli=1&gid=820077438#gid=820077438"
+SCRIPT_URL    = "https://script.google.com/macros/s/AKfycbzzQAVp2mhqlnzWzxPEhVgoX_vtYzh_B4ukxCTjFHM0Uxe8LItU6bQ7ZLt4_ISS2orp/exec"
 
 DEFAULT_SHABAB = [
     "أبو عمار على شهبور",
