@@ -239,7 +239,13 @@ def calc_expense_ratio(vac_info, days_in_month, sel_year, sel_month):
 # ─────────────────────────────────────────────
 #  الحسابات الرئيسية
 # ─────────────────────────────────────────────
-month_df    = all_data[all_data["الشهر"] == selected_month_ar] if not all_data.empty else pd.DataFrame()
+# فلترة المصاريف الحقيقية فقط (مبلغ صحيح > 0) – يستبعد أي صفوف إجازات أو فارغة
+_raw_month  = all_data[all_data["الشهر"] == selected_month_ar] if not all_data.empty else pd.DataFrame()
+if not _raw_month.empty:
+    _valid_mask = pd.to_numeric(_raw_month["المبلغ"], errors='coerce').fillna(0) > 0
+    month_df    = _raw_month[_valid_mask].copy()
+else:
+    month_df    = pd.DataFrame()
 total_extra = pd.to_numeric(month_df["المبلغ"], errors='coerce').sum() if not month_df.empty else 0.0
 
 # نسب الحضور للمصاريف
@@ -541,11 +547,6 @@ with tab4:
     display_df  = month_df.copy() if not month_df.empty else pd.DataFrame()
     if filter_name != "الكل" and not display_df.empty:
         display_df = display_df[display_df["الاسم"] == filter_name]
-
-    # حذف صفوف الإجازات (لا تملك مبلغاً صحيحاً أو اسم بيان)
-    if not display_df.empty:
-        display_df = display_df[pd.to_numeric(display_df["المبلغ"], errors='coerce').notna()]
-        display_df = display_df[pd.to_numeric(display_df["المبلغ"], errors='coerce') > 0]
 
     if not display_df.empty:
         filtered_total = pd.to_numeric(display_df["المبلغ"], errors='coerce').sum()
