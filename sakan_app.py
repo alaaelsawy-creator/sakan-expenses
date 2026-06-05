@@ -66,7 +66,7 @@ html, body, [class*="css"] { font-family: 'Tajawal', sans-serif !important; dire
 #  الثوابت
 # ─────────────────────────────────────────────
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT_URL    = "https://script.google.com/macros/s/AKfycbwZ9XV8lM00bTDs__ygQSONs1Urt3LAE3Z-vlbrFEfFOuUGCzlYm7GdQkdhm96DJrTD/exec"
+SCRIPT_URL    = "https://script.google.com/macros/s/AKfycbwV1wcU4_BXk-fdjhue_qsguQAuDN66KLpFzsGSF8ZxS1NohsAoiKLgMNZxDeKss9GG/exec"
 
 MONTHS_AR = {
     "January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
@@ -296,8 +296,8 @@ if not SHABAB:
 # ─────────────────────────────────────────────
 #  التبويبات
 # ─────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "📊 الملخص", "➕ إضافة مصروف", "🏖️ الإجازات", "📜 السجل", "⚙️ إدارة الأشخاص", "📋 سجل الأحداث"
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    "📊 الملخص", "➕ إضافة مصروف", "🏖️ الإجازات", "📜 سجل المصاريف", "⚙️ إدارة الأشخاص", "📋 سجل الأحداث", "🏠 خدمات الشقة"
 ])
 
 # ══════════════════════════════════════════════
@@ -654,7 +654,7 @@ with tab5:
     st.divider()
     st.markdown("### ➕ إضافة شخص جديد")
     with st.form("add_person_form", clear_on_submit=True):
-        new_person = st.text_input("اسم الشخص", placeholder="مثال: أبو عمر أحمد محمد")
+        new_person = st.text_input("اسم الشخص", placeholder="مثال: أبو عمر محمد السيد")
         if st.form_submit_button("➕ إضافة", use_container_width=True):
             if new_person.strip():
                 if new_person.strip() in SHABAB:
@@ -746,3 +746,243 @@ with tab6:
             </div>""", unsafe_allow_html=True)
     else:
         st.info("لا توجد أحداث مسجلة بعد.")
+
+# ══════════════════════════════════════════════
+#  تبويب ٧: خدمات الشقة
+# ══════════════════════════════════════════════
+with tab7:
+    st.subheader("🏠 خدمات الشقة")
+
+    svc_tab1, svc_tab2 = st.tabs(["🧹 تنظيف الشقة", "🔵 ملء الأنبوبة"])
+
+    # ─────────────────────────────────────────
+    #  قسم التنظيف
+    # ─────────────────────────────────────────
+    with svc_tab1:
+        st.markdown("""
+<div class="info-box">
+🧹 <b>نظام دور التنظيف:</b><br>
+• كل شخص ينظف <b>يومين في الأسبوع</b> من <b>الخميس إلى السبت</b>.<br>
+• من ينظف هذا الأسبوع ينظف الأسبوع القادم أيضاً، ثم لا ينظف حتى يدور الدور على الجميع.<br>
+• <b>من في إجازة يُستثنى</b> ويأخذ دوره عند عودته.
+</div>
+""", unsafe_allow_html=True)
+
+        # ──── تحميل سجل التنظيف ────
+        @st.cache_data(ttl=60)
+        def load_cleaning():
+            try:
+                resp = requests.get(SCRIPT_URL + "?type=cleaning", timeout=10)
+                return resp.json()
+            except:
+                return []
+
+        cleaning_log = load_cleaning()
+
+        # ──── احتساب الدور القادم ────
+        def get_next_cleaner(log, persons, vacations_now):
+            """
+            يحسب من عليه الدور القادم:
+            - يبحث عن آخر من نظّف في السجل
+            - يدور على القائمة ويتجاوز من في إجازة
+            - كل شخص ينظف دورتين متتاليتين (أسبوعان)
+            """
+            if not persons:
+                return None, None
+            on_vacation = {p for p, v in vacations_now.items() if v.get("type", "none") != "none"}
+            available = [p for p in persons if p not in on_vacation]
+            if not available:
+                return None, "⚠️ جميع الأشخاص في إجازة"
+
+            if not log:
+                return available[0], None
+
+            # آخر إدخال
+            last = log[0]  # مرتبة عكسياً (الأحدث أولاً)
+            last_cleaner = last.get("cleaner", "")
+
+            # ابحث عن آخر شخص نظّف مرتين (أسبوعان متتاليان)
+            # عدّ كم مرة نظّف آخر شخص بشكل متتالٍ
+            consecutive = 0
+            for entry in log:
+                if entry.get("cleaner") == last_cleaner:
+                    consecutive += 1
+                else:
+                    break
+
+            if consecutive >= 2:
+                # انتقل للشخص التالي في القائمة (مع تجاوز المجازين)
+                if last_cleaner in available:
+                    idx = available.index(last_cleaner)
+                    next_idx = (idx + 1) % len(available)
+                else:
+                    next_idx = 0
+                return available[next_idx], None
+            else:
+                # نفس الشخص لم يكمل دورتيه
+                if last_cleaner in available:
+                    return last_cleaner, None
+                else:
+                    # كان في إجازة، انتقل للتالي
+                    if available:
+                        return available[0], None
+
+            return available[0], None
+
+        current_vacations_now = st.session_state.vacations.get(selected_month_ar, {})
+        next_cleaner, warn_msg = get_next_cleaner(cleaning_log, SHABAB, current_vacations_now)
+
+        if warn_msg:
+            st.warning(warn_msg)
+        elif next_cleaner:
+            st.markdown(f"""
+<div style="background:linear-gradient(135deg,#0d3b2e,#1a4a38);border:2px solid #4ade80;
+     border-radius:16px;padding:20px;text-align:center;margin-bottom:20px;">
+  <div style="color:#86efac;font-size:0.9rem;margin-bottom:6px;">🧹 دور التنظيف القادم</div>
+  <div style="color:#4ade80;font-size:2rem;font-weight:800;">{next_cleaner}</div>
+</div>
+""", unsafe_allow_html=True)
+
+        st.markdown("### ✅ تسجيل دور التنظيف")
+        if not SHABAB:
+            st.info("أضف أشخاصاً أولاً.")
+        else:
+            from datetime import timedelta
+
+            # حساب الأسبوع القادم خميس–سبت
+            today = date.today()
+            days_ahead = (3 - today.weekday()) % 7  # 3 = Thursday
+            if days_ahead == 0:
+                days_ahead = 7
+            next_thu = today + timedelta(days=days_ahead)
+            next_sat = next_thu + timedelta(days=2)
+
+            with st.form("cleaning_form", clear_on_submit=True):
+                cleaner_sel  = st.selectbox("من نظّف / من عليه الدور؟", SHABAB,
+                                             index=SHABAB.index(next_cleaner) if next_cleaner and next_cleaner in SHABAB else 0)
+                week_from    = st.date_input("من يوم", value=next_thu)
+                week_to      = st.date_input("إلى يوم", value=next_sat)
+                cleaning_note= st.text_input("ملاحظة (اختياري)", placeholder="مثال: تنظيف عميق")
+                if st.form_submit_button("✅ تسجيل", use_container_width=True):
+                    with st.spinner("حفظ…"):
+                        res = call_script({
+                            "action": "addCleaningEntry",
+                            "cleaner": cleaner_sel,
+                            "weekFrom": str(week_from),
+                            "weekTo": str(week_to),
+                            "note": cleaning_note,
+                        })
+                    if "Success" in res:
+                        st.success("✅ تم تسجيل دور التنظيف!")
+                        load_cleaning.cache_clear() if hasattr(load_cleaning, 'cache_clear') else None
+                        st.cache_data.clear()
+                        st.rerun()
+                    else:
+                        st.error(res)
+
+        st.markdown("### 📋 سجل التنظيف")
+        if cleaning_log:
+            for entry in cleaning_log[:10]:
+                on_vac = current_vacations_now.get(entry.get("cleaner",""), {}).get("type","none") != "none"
+                badge  = '<span style="background:#1a2e3b;color:#60a5fa;border-radius:10px;padding:2px 10px;font-size:0.8rem;">في إجازة</span>' if on_vac else ""
+                st.markdown(f"""
+<div style="background:#1a1e2e;border:1px solid #2a2f45;border-radius:10px;
+     padding:12px 18px;margin-bottom:8px;direction:rtl;
+     display:flex;justify-content:space-between;align-items:center;">
+  <span style="color:#4ade80;font-weight:700;font-size:1rem;">🧹 {entry.get('cleaner','')}</span>
+  <span style="color:#8892b0;font-size:0.85rem;">
+    📅 {entry.get('weekFrom','')} → {entry.get('weekTo','')}
+  </span>
+  {badge}
+</div>""", unsafe_allow_html=True)
+        else:
+            st.info("لا يوجد سجل تنظيف بعد.")
+
+    # ─────────────────────────────────────────
+    #  قسم الأنبوبة
+    # ─────────────────────────────────────────
+    with svc_tab2:
+        st.markdown("""
+<div class="info-box">
+🔵 <b>نظام ملء الأنبوبة:</b><br>
+• كل شخص يملأ الأنبوبة مرة واحدة بالترتيب.<br>
+• سجّل من ملأ الأنبوبة وسيظهر من عليه الدور القادم تلقائياً.
+</div>
+""", unsafe_allow_html=True)
+
+        @st.cache_data(ttl=60)
+        def load_gas():
+            try:
+                resp = requests.get(SCRIPT_URL + "?type=gas", timeout=10)
+                return resp.json()
+            except:
+                return []
+
+        gas_log = load_gas()
+
+        def get_next_gas_person(log, persons):
+            if not persons:
+                return None
+            if not log:
+                return persons[0]
+            last_filler = log[0].get("filler", "")
+            if last_filler in persons:
+                idx = persons.index(last_filler)
+                return persons[(idx + 1) % len(persons)]
+            return persons[0]
+
+        next_gas = get_next_gas_person(gas_log, SHABAB)
+
+        if next_gas:
+            st.markdown(f"""
+<div style="background:linear-gradient(135deg,#0d1f3c,#1a2e4a);border:2px solid #60a5fa;
+     border-radius:16px;padding:20px;text-align:center;margin-bottom:20px;">
+  <div style="color:#93c5fd;font-size:0.9rem;margin-bottom:6px;">🔵 دور ملء الأنبوبة القادم</div>
+  <div style="color:#60a5fa;font-size:2rem;font-weight:800;">{next_gas}</div>
+</div>
+""", unsafe_allow_html=True)
+
+        st.markdown("### ✅ تسجيل ملء الأنبوبة")
+        if not SHABAB:
+            st.info("أضف أشخاصاً أولاً.")
+        else:
+            with st.form("gas_form", clear_on_submit=True):
+                filler_sel = st.selectbox("من ملأ الأنبوبة؟", SHABAB,
+                                          index=SHABAB.index(next_gas) if next_gas and next_gas in SHABAB else 0)
+                # حساب التالي
+                if filler_sel in SHABAB:
+                    next_idx_g = (SHABAB.index(filler_sel) + 1) % len(SHABAB)
+                    computed_next = SHABAB[next_idx_g]
+                else:
+                    computed_next = SHABAB[0]
+
+                st.info(f"الشخص التالي في الدور: **{computed_next}**")
+                if st.form_submit_button("✅ تسجيل", use_container_width=True):
+                    with st.spinner("حفظ…"):
+                        res = call_script({
+                            "action": "addGasEntry",
+                            "filler": filler_sel,
+                            "nextPerson": computed_next,
+                        })
+                    if "Success" in res:
+                        st.success(f"✅ تم تسجيل ملء الأنبوبة بواسطة {filler_sel}! الدور القادم: {computed_next}")
+                        load_gas.cache_clear() if hasattr(load_gas, 'cache_clear') else None
+                        st.cache_data.clear()
+                        st.rerun()
+                    else:
+                        st.error(res)
+
+        st.markdown("### 📋 سجل الأنبوبة")
+        if gas_log:
+            for entry in gas_log[:10]:
+                st.markdown(f"""
+<div style="background:#1a1e2e;border:1px solid #2a2f45;border-radius:10px;
+     padding:12px 18px;margin-bottom:8px;direction:rtl;
+     display:flex;justify-content:space-between;align-items:center;">
+  <span style="color:#60a5fa;font-weight:700;">🔵 {entry.get('filler','')}</span>
+  <span style="color:#8892b0;font-size:0.85rem;">
+    📅 {str(entry.get('date',''))[:10]} &nbsp;|&nbsp; التالي: <b style="color:#93c5fd;">{entry.get('nextPerson','')}</b>
+  </span>
+</div>""", unsafe_allow_html=True)
+        else:
+            st.info("لا يوجد سجل أنبوبة بعد.")
