@@ -66,7 +66,7 @@ html, body, [class*="css"] { font-family: 'Tajawal', sans-serif !important; dire
 #  الثوابت
 # ─────────────────────────────────────────────
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT_URL    = "https://script.google.com/macros/s/AKfycbxvdvpUxSfU3gIkMBu3WLaFszZ6BWSNqDB-RJp95K_NUfL0tL7Q-yJTrULoBa4Vwb9h/exec"
+SCRIPT_URL    = "https://script.google.com/macros/s/AKfycbwZ9XV8lM00bTDs__ygQSONs1Urt3LAE3Z-vlbrFEfFOuUGCzlYm7GdQkdhm96DJrTD/exec"
 
 MONTHS_AR = {
     "January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
@@ -130,6 +130,13 @@ def load_data():
         return df
     except:
         return pd.DataFrame(columns=["الشهر","الاسم","المبلغ","البيان","التاريخ","الصورة","_row","_rowId"])
+
+def load_log():
+    try:
+        resp = requests.get(SCRIPT_URL + "?type=log", timeout=10)
+        return resp.json()
+    except:
+        return []
 
 def call_script(payload):
     try:
@@ -289,8 +296,8 @@ if not SHABAB:
 # ─────────────────────────────────────────────
 #  التبويبات
 # ─────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "📊 الملخص", "➕ إضافة مصروف", "🏖️ الإجازات", "📜 السجل", "⚙️ إدارة الأشخاص"
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "📊 الملخص", "➕ إضافة مصروف", "🏖️ الإجازات", "📜 السجل", "⚙️ إدارة الأشخاص", "📋 سجل الأحداث"
 ])
 
 # ══════════════════════════════════════════════
@@ -647,7 +654,7 @@ with tab5:
     st.divider()
     st.markdown("### ➕ إضافة شخص جديد")
     with st.form("add_person_form", clear_on_submit=True):
-        new_person = st.text_input("اسم الشخص", placeholder="مثال: أبو عمر محمد السيد")
+        new_person = st.text_input("اسم الشخص", placeholder="مثال: أبو عمر أحمد محمد")
         if st.form_submit_button("➕ إضافة", use_container_width=True):
             if new_person.strip():
                 if new_person.strip() in SHABAB:
@@ -663,3 +670,79 @@ with tab5:
                         st.error(res)
             else:
                 st.warning("⚠️ أدخل اسماً صحيحاً.")
+
+# ══════════════════════════════════════════════
+#  تبويب ٦: سجل الأحداث
+# ══════════════════════════════════════════════
+with tab6:
+    st.subheader("📋 سجل الأحداث التاريخي")
+
+    col_r1, col_r2 = st.columns([1, 1])
+    with col_r1:
+        filter_type = st.selectbox("فلتر النوع", [
+            "الكل", "➕ إضافة مصروف", "✏️ تعديل مصروف", "🗑️ حذف مصروف",
+            "🏖️ تسجيل إجازة", "🏖️ إلغاء إجازة",
+            "👤 إضافة شخص", "🗑️ حذف شخص", "✏️ تغيير اسم",
+            "⚙️ تغيير إعداد", "⚙️ إعداد جديد"
+        ])
+    with col_r2:
+        if st.button("🔄 تحديث السجل", use_container_width=True):
+            st.rerun()
+
+    with st.spinner("جاري تحميل السجل…"):
+        log_data = load_log()
+
+    if filter_type != "الكل":
+        log_data = [r for r in log_data if r.get("type","") == filter_type]
+
+    if log_data:
+        st.markdown(f"**إجمالي الأحداث: {len(log_data)}**")
+        st.divider()
+
+        # ألوان حسب النوع
+        type_colors = {
+            "➕ إضافة مصروف":  "#0d3b2e",
+            "✏️ تعديل مصروف":  "#1a2e1a",
+            "🗑️ حذف مصروف":   "#3b0d0d",
+            "🏖️ تسجيل إجازة": "#0d1f3c",
+            "🏖️ إلغاء إجازة": "#1a1a2e",
+            "👤 إضافة شخص":    "#1a2e1a",
+            "🗑️ حذف شخص":     "#3b0d0d",
+            "✏️ تغيير اسم":    "#1a1f3c",
+            "⚙️ تغيير إعداد":  "#2a1a0d",
+            "⚙️ إعداد جديد":   "#2a1a0d",
+        }
+        type_text_colors = {
+            "➕ إضافة مصروف":  "#4ade80",
+            "✏️ تعديل مصروف":  "#86efac",
+            "🗑️ حذف مصروف":   "#f87171",
+            "🏖️ تسجيل إجازة": "#60a5fa",
+            "🏖️ إلغاء إجازة": "#93c5fd",
+            "👤 إضافة شخص":    "#4ade80",
+            "🗑️ حذف شخص":     "#f87171",
+            "✏️ تغيير اسم":    "#a78bfa",
+            "⚙️ تغيير إعداد":  "#fbbf24",
+            "⚙️ إعداد جديد":   "#fbbf24",
+        }
+
+        for entry in log_data:
+            bg    = type_colors.get(entry.get("type",""), "#1a1e2e")
+            color = type_text_colors.get(entry.get("type",""), "#e0e6ff")
+            month_badge = f'<span style="background:#1a237e;color:#90caf9;border-radius:10px;padding:2px 10px;font-size:0.8rem;margin-right:8px;">{entry.get("month","")}</span>' if entry.get("month") else ""
+            st.markdown(f"""
+            <div style="background:{bg};border-radius:10px;padding:12px 18px;
+                        margin-bottom:8px;direction:rtl;border:1px solid #2a2f45;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="color:{color};font-weight:700;font-size:0.95rem;">
+                        {entry.get("type","")}
+                    </span>
+                    <span style="color:#8892b0;font-size:0.8rem;">
+                        🕐 {entry.get("datetime","")}
+                    </span>
+                </div>
+                <div style="color:#c8cfd8;margin-top:6px;font-size:0.9rem;">
+                    {month_badge}{entry.get("details","")}
+                </div>
+            </div>""", unsafe_allow_html=True)
+    else:
+        st.info("لا توجد أحداث مسجلة بعد.")
