@@ -323,7 +323,11 @@ def compute_next_cleaner_from_log(log, persons):
     # آخر دور مسجّل
     last = log[0]
     last_pair = [x.strip() for x in last.get("cleaner","").split("،") if x.strip()]
-    week_num  = int(last.get("weekNum", 1))
+    # تحويل آمن لرقم الأسبوع
+    try:
+        week_num = int(str(last.get("weekNum", 1)).strip() or 1)
+    except (ValueError, TypeError):
+        week_num = 1
     # إذا أُكمل الأسبوع الثاني → انتقل للزوج التالي
     if week_num >= 2:
         # بناء ترتيب الأزواج من السجل
@@ -917,7 +921,10 @@ with tab4:
 
             last_entry   = log[0]
             last_pair    = [x.strip() for x in last_entry.get("cleaner","").split("،") if x.strip()]
-            last_week_n  = int(last_entry.get("weekNum", 1))
+            try:
+                last_week_n = int(str(last_entry.get("weekNum", 1)).strip() or 1)
+            except (ValueError, TypeError):
+                last_week_n = 1
 
             if last_week_n >= 2:
                 # أكمل الأسبوعين → زوج جديد
