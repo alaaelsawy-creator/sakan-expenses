@@ -780,29 +780,28 @@ with tab7:
         cleaning_log = load_cleaning()
 
         # ──── احتساب الدور القادم ────
-        def get_next_cleaner(log, persons, vacations_now):
+        def get_next_cleaner(log, persons, exemptions):
             """
-            يحسب من عليه الدور القادم:
-            - يبحث عن آخر من نظّف في السجل
-            - يدور على القائمة ويتجاوز من في إجازة
-            - كل شخص ينظف دورتين متتاليتين (أسبوعان)
+            يحسب من عليه الدور القادم بناءً على السجل الفعلي:
+            - الدور يُحدَّد من آخر من نظّف في السجل (لا علاقة بترتيب القائمة).
+            - كل شخص ينظف دورتين متتاليتين (أسبوعان)، ثم ينتقل الدور.
+            - المعفيون (exemptions) يُتخطَّون تلقائياً ويعودون للدور عند رفع الإعفاء.
+            - "المعفيون" يشمل: إجازة مسجّلة + أي شخص أضافه المستخدم يدوياً.
             """
             if not persons:
                 return None, None
-            on_vacation = {p for p, v in vacations_now.items() if v.get("type", "none") != "none"}
-            available = [p for p in persons if p not in on_vacation]
+
+            available = [p for p in persons if p not in exemptions]
             if not available:
-                return None, "⚠️ جميع الأشخاص في إجازة"
+                return None, "⚠️ جميع الأشخاص معفيون حالياً"
 
             if not log:
                 return available[0], None
 
-            # آخر إدخال
-            last = log[0]  # مرتبة عكسياً (الأحدث أولاً)
-            last_cleaner = last.get("cleaner", "")
+            # السجل مرتب عكسياً (الأحدث أولاً)
+            last_cleaner = log[0].get("cleaner", "")
 
-            # ابحث عن آخر شخص نظّف مرتين (أسبوعان متتاليان)
-            # عدّ كم مرة نظّف آخر شخص بشكل متتالٍ
+            # عدد المرات المتتالية الأخيرة لنفس الشخص
             consecutive = 0
             for entry in log:
                 if entry.get("cleaner") == last_cleaner:
@@ -810,38 +809,109 @@ with tab7:
                 else:
                     break
 
-            if consecutive >= 2:
-                # انتقل للشخص التالي في القائمة (مع تجاوز المجازين)
-                if last_cleaner in available:
-                    idx = available.index(last_cleaner)
-                    next_idx = (idx + 1) % len(available)
-                else:
-                    next_idx = 0
-                return available[next_idx], None
-            else:
-                # نفس الشخص لم يكمل دورتيه
-                if last_cleaner in available:
-                    return last_cleaner, None
-                else:
-                    # كان في إجازة، انتقل للتالي
-                    if available:
-                        return available[0], None
+            if consecutive >= 2 or last_cleaner not in available:
+                # أكمل دورتيه أو صار معفى → ابحث عن التالي
+                # بناء ترتيب الدور من السجل: آخر من نظّف من المتاحين
+                seen_order = []
+                seen_set   = set()
+                for entry in log:
+                    c = entry.get("cleaner", "")
+                    if c in available and c not in seen_set:
+                        seen_order.append(c)
+                        seen_set.add(c)
+                # أضف من لم يظهر في السجل بعد (جدد أو لم ينظفوا)
+                for p in available:
+                    if p not in seen_set:
+                        seen_order.append(p)
 
-            return available[0], None
+                if last_cleaner in seen_order:
+                    idx = seen_order.index(last_cleaner)
+                    return seen_order[(idx + 1) % len(seen_order)], None
+                else:
+                    return seen_order[0], None
+            else:
+                # لم يكمل دورتيه بعد
+                return last_cleaner, None
 
         current_vacations_now = st.session_state.vacations.get(selected_month_ar, {})
-        next_cleaner, warn_msg = get_next_cleaner(cleaning_log, SHABAB, current_vacations_now)
 
+        # المعفيون = من في إجازة مسجّلة + من أضافهم المستخدم يدوياً في حقل الإعفاء
+        vacation_exempt = {p for p, v in current_vacations_now.items() if v.get("type", "none") != "none"}
+
+        # حقل إعفاء يدوي (مرن — لا يعتمد على الإجازات فقط)
+        st.markdown("#### 🚫 إعفاء مؤقت من التنظيف")
+        st.caption("اختر من هو معفى هذا الأسبوع (سفر / مرض / أي سبب). لا يؤثر على الإجازات المسجّلة.")
+        manual_exempt = st.multiselect(
+            "معفى هذا الأسبوع",
+            options=SHABAB,
+            default=[p for p in SHABAB if p in vacation_exempt],
+            key="cleaning_exempt"
+        )
+        all_exempt = set(manual_exempt)
+
+        next_cleaner, warn_msg = get_next_cleaner(cleaning_log, SHABAB, all_exempt)
+
+        st.markdown("---")
         if warn_msg:
             st.warning(warn_msg)
         elif next_cleaner:
+            # هل أكمل دورة واحدة فقط أم ننتظر دورة ثانية؟
+            consecutive_now = 0
+            for entry in cleaning_log:
+                if entry.get("cleaner") == next_cleaner:
+                    consecutive_now += 1
+                else:
+                    break
+            week_label = "الأسبوع الثاني 🔁" if consecutive_now == 1 else "الأسبوع الأول 🆕"
+
             st.markdown(f"""
 <div style="background:linear-gradient(135deg,#0d3b2e,#1a4a38);border:2px solid #4ade80;
      border-radius:16px;padding:20px;text-align:center;margin-bottom:20px;">
-  <div style="color:#86efac;font-size:0.9rem;margin-bottom:6px;">🧹 دور التنظيف القادم</div>
+  <div style="color:#86efac;font-size:0.9rem;margin-bottom:4px;">🧹 دور التنظيف القادم</div>
   <div style="color:#4ade80;font-size:2rem;font-weight:800;">{next_cleaner}</div>
+  <div style="color:#6ee7b7;font-size:0.85rem;margin-top:6px;">{week_label}</div>
 </div>
 """, unsafe_allow_html=True)
+
+            # عرض حالة كل شخص
+            if SHABAB:
+                st.markdown("##### 👥 ترتيب الدور")
+                # بناء ترتيب الدور من السجل
+                seen_order, seen_set = [], set()
+                available_for_order = [p for p in SHABAB if p not in all_exempt]
+                for entry in cleaning_log:
+                    c = entry.get("cleaner", "")
+                    if c in available_for_order and c not in seen_set:
+                        seen_order.append(c)
+                        seen_set.add(c)
+                for p in available_for_order:
+                    if p not in seen_set:
+                        seen_order.append(p)
+
+                cols_status = st.columns(len(SHABAB) if len(SHABAB) <= 4 else 4)
+                for i, person in enumerate(seen_order):
+                    is_next  = (person == next_cleaner)
+                    is_exempt= (person in all_exempt)
+                    # عدد مرات تنظيف هذا الشخص إجمالاً
+                    total_times = sum(1 for e in cleaning_log if e.get("cleaner") == person)
+                    with cols_status[i % 4]:
+                        if is_exempt:
+                            color, icon, label = "#60a5fa", "🚫", "معفى"
+                        elif is_next:
+                            color, icon, label = "#4ade80", "🧹", "دوره الآن"
+                        else:
+                            color, icon, label = "#8892b0", "⏳", f"نظّف {total_times}×"
+                        st.markdown(f"""
+<div style="background:#1a1e2e;border:1px solid {'#4ade80' if is_next else '#2a2f45'};
+     border-radius:10px;padding:10px;text-align:center;margin-bottom:8px;">
+  <div style="font-size:1.3rem;">{icon}</div>
+  <div style="color:{color};font-weight:700;font-size:0.9rem;">{person}</div>
+  <div style="color:#6b7280;font-size:0.75rem;">{label}</div>
+</div>""", unsafe_allow_html=True)
+                # من في الإعفاء من القائمة الكاملة
+                for person in SHABAB:
+                    if person in all_exempt:
+                        st.markdown(f'<span style="color:#60a5fa;font-size:0.85rem;">🚫 {person} معفى هذا الأسبوع</span>', unsafe_allow_html=True)
 
         st.markdown("### ✅ تسجيل دور التنظيف")
         if not SHABAB:
@@ -858,8 +928,30 @@ with tab7:
             next_sat = next_thu + timedelta(days=2)
 
             with st.form("cleaning_form", clear_on_submit=True):
-                cleaner_sel  = st.selectbox("من نظّف / من عليه الدور؟", SHABAB,
-                                             index=SHABAB.index(next_cleaner) if next_cleaner and next_cleaner in SHABAB else 0)
+                # القائمة تشمل الجميع، مع تمييز واضح للمعفيين
+                persons_display = []
+                for p in SHABAB:
+                    if p in all_exempt:
+                        persons_display.append(f"{p} 🚫 (معفى)")
+                    else:
+                        persons_display.append(p)
+
+                # الاختيار الافتراضي هو من عليه الدور
+                default_idx = 0
+                if next_cleaner:
+                    clean_names = [p for p in SHABAB if p not in all_exempt]
+                    if next_cleaner in SHABAB:
+                        default_idx = SHABAB.index(next_cleaner)
+
+                cleaner_raw  = st.selectbox(
+                    "من نظّف فعلاً هذا الأسبوع؟",
+                    persons_display,
+                    index=default_idx,
+                    help="يمكنك تغيير الاختيار إذا نظّف شخص غير المقترح"
+                )
+                # استخراج الاسم الحقيقي (بدون الـ suffix)
+                cleaner_sel  = SHABAB[persons_display.index(cleaner_raw)]
+
                 week_from    = st.date_input("من يوم", value=next_thu)
                 week_to      = st.date_input("إلى يوم", value=next_sat)
                 cleaning_note= st.text_input("ملاحظة (اختياري)", placeholder="مثال: تنظيف عميق")
@@ -873,7 +965,7 @@ with tab7:
                             "note": cleaning_note,
                         })
                     if "Success" in res:
-                        st.success("✅ تم تسجيل دور التنظيف!")
+                        st.success(f"✅ تم تسجيل دور {cleaner_sel}!")
                         load_cleaning.cache_clear() if hasattr(load_cleaning, 'cache_clear') else None
                         st.cache_data.clear()
                         st.rerun()
