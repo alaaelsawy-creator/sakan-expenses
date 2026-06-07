@@ -43,7 +43,7 @@ html,body,[class*="css"]{font-family:'Tajawal',sans-serif!important;direction:rt
 #  الثوابت
 # ══════════════════════════════════════════════
 SHEET_CSV = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT    = "https://script.google.com/macros/s/AKfycbwKm_8NLqOrFWc-2MD0a3e6RQAFX6GYsCK37v-2LnnPXdbOb_EqKOb-ucFLk9XGlaV_/exec"
+SCRIPT    = "https://script.google.com/macros/s/AKfycbxUTxcLiJ-oogb4uaUZEesheCHkrkbFbwg7MfNrQXOdT8RzadnzlI-uq4gj5KwHkecI/exec"
 MONTHS_AR = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
              "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
              "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
@@ -253,7 +253,7 @@ def maybe_remind(rotation, next_gas):
 # ══════════════════════════════════════════════
 st.markdown("""<div class="app-header">
   <h1>🏠 تنظيم السكن</h1>
-  <p>إعداد أبو زين • تتبع وتوزيع المصاريف والأدوار بدقة وشفافية</p>
+  <p>إعداد أبو زين • تتبع وتوزيع المصاريف بدقة وشفافية</p>
 </div>""", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
