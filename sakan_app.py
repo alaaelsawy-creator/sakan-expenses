@@ -565,19 +565,27 @@ with tab4:
             st.markdown("### 🗓️ جدول الدوران – الجمع القادمة")
             st.caption("🔵 = أسبوعه الثاني  |  🟢 = أسبوعه الأول  |  اختر من القوائم ثم اضغط حفظ")
 
-            # ── رسم الصفوف — الاقتراح دائماً من build_rotation مباشرة ──
-            # لا session_state للاختيارات — يضمن التطابق مع الـ Sheet بعد كل refresh
-            saved_sec=None; saved_fir=None; saved_nxt_sec=None; saved_nxt_fir=None
-            save_fri=None
+            # مفتاح يتغير فقط عند تغيير nextPair في الـ Sheet (أي بعد حفظ جديد)
+            _np_key = "cl_init_" + (cl_log[0].get("nextPair","") if cl_log else "").replace(" ","").replace("،","")
+
+            # ضبط القيم الافتراضية من build_rotation عند أول دخول أو بعد حفظ جديد
+            if _np_key not in st.session_state:
+                for k in list(st.session_state.keys()):
+                    if k.startswith("s_s_") or k.startswith("s_f_") or k.startswith("cl_init_"):
+                        del st.session_state[k]
+                for i,r in enumerate(rotation):
+                    s = r["p_sec"] if r["p_sec"] not in ("—","") and r["p_sec"] in SHABAB else (SHABAB[0] if SHABAB else "")
+                    f2= r["p_fir"] if r["p_fir"] not in ("—","") and r["p_fir"] in SHABAB else (SHABAB[1] if len(SHABAB)>1 else "")
+                    st.session_state["s_s_"+str(i)] = s
+                    st.session_state["s_f_"+str(i)] = f2
+                st.session_state[_np_key] = True
+
+            save_fri = rotation[0]["fri"] if rotation else next_friday()
 
             for i,r in enumerate(rotation):
                 is_cur  = r["is_cur"]
                 fri_str = r["fri_str"]
                 skipped = r["skipped"]
-                # الاقتراح من build_rotation مباشرة
-                sug_s = r["p_sec"] if r["p_sec"] not in ("—","") and r["p_sec"] in SHABAB else (SHABAB[0] if SHABAB else "")
-                sug_f = r["p_fir"] if r["p_fir"] not in ("—","") and r["p_fir"] in SHABAB else (SHABAB[1] if len(SHABAB)>1 else "")
-
                 bg   = "#0a1f14" if is_cur else "#141824"
                 bord = "2px solid #4ade80" if is_cur else "1px solid #2a2f45"
                 fcol = "#4ade80" if is_cur else "#8892b0"
@@ -590,51 +598,54 @@ with tab4:
                     '📅 الجمعة '+fri_str+ctag+'</div>',
                     unsafe_allow_html=True)
 
-                cs,cf2=st.columns([2,2])
-
+                cs,cf2 = st.columns([2,2])
                 with cs:
-                    idx_s = SHABAB.index(sug_s) if sug_s in SHABAB else 0
-                    sel_s = st.selectbox("🔵 أسبوعه الثاني", SHABAB,
-                                         index=idx_s, key="s_s_"+str(i))
-
+                    sel_s = st.selectbox("🔵 أسبوعه الثاني", SHABAB, key="s_s_"+str(i))
                 with cf2:
-                    fopts = [p for p in SHABAB if p!=sel_s] or SHABAB
-                    sug_f2 = sug_f if sug_f in fopts else fopts[0]
-                    idx_f = fopts.index(sug_f2)
+                    cur_s_val = st.session_state.get("s_s_"+str(i), SHABAB[0])
+                    fopts = [p for p in SHABAB if p != cur_s_val] or SHABAB
+                    cur_f_val = st.session_state.get("s_f_"+str(i), fopts[0])
+                    if cur_f_val not in fopts:
+                        cur_f_val = fopts[0]
+                        st.session_state["s_f_"+str(i)] = cur_f_val
                     sel_f = st.selectbox("🟢 أسبوعه الأول", fopts,
-                                         index=idx_f, key="s_f_"+str(i))
+                                         index=fopts.index(cur_f_val),
+                                         key="s_f_"+str(i))
 
                 if skipped:
                     st.markdown('<div style="color:#6b7280;font-size:.72rem;">⏭️ تخطي: '+"، ".join(skipped)+'</div>',unsafe_allow_html=True)
-
                 st.markdown('</div>',unsafe_allow_html=True)
-
-                # اجمع بيانات الحفظ من أول صفين
-                if i==0: saved_sec=sel_s; saved_fir=sel_f; save_fri=r["fri"]
-                if i==1: saved_nxt_sec=sel_s; saved_nxt_fir=sel_f
-
 
             # ── زر الحفظ أسفل الجدول ──
             st.markdown("---")
             cl_note=st.text_input("ملاحظة (اختياري)",placeholder="مثال: تنظيف عميق",key="cl_note")
             if st.button("💾 حفظ دور هذه الجمعة",type="primary",use_container_width=True,key="save_cl"):
-                if not saved_sec or not saved_fir:
+                # قراءة الاختيارات من session_state مباشرة (لا من متغيرات محلية)
+                _sec = st.session_state.get("s_s_0","")
+                _fir = st.session_state.get("s_f_0","")
+                _nxt_sec = st.session_state.get("s_s_1","")
+                _nxt_fir = st.session_state.get("s_f_1","")
+                if not _sec or not _fir:
                     st.warning("⚠️ لا يوجد بيانات للحفظ.")
-                elif saved_sec==saved_fir:
+                elif _sec == _fir:
                     st.warning("⚠️ يجب أن يكون الشخصان مختلفَين.")
                 else:
-                    if not saved_nxt_sec: saved_nxt_sec=saved_sec
-                    if not saved_nxt_fir: saved_nxt_fir=saved_fir
-                    cleaner_str=saved_sec+"، "+saved_fir
-                    next_str   =saved_nxt_sec+"، "+saved_nxt_fir
-                    fri_save   =save_fri.strftime("%d/%m/%Y") if save_fri else next_friday().strftime("%d/%m/%Y")
+                    if not _nxt_sec: _nxt_sec=_sec
+                    if not _nxt_fir: _nxt_fir=_fir
+                    cleaner_str = _sec+"، "+_fir
+                    next_str    = _nxt_sec+"، "+_nxt_fir
+                    fri_save    = save_fri.strftime("%d/%m/%Y") if save_fri else next_friday().strftime("%d/%m/%Y")
                     with st.spinner("حفظ…"):
                         res=api({"action":"addCleaningEntry","cleaner":cleaner_str,
                                  "weekFrom":str(save_fri),"weekTo":str(save_fri),
                                  "weekNum":"1","nextPair":next_str,"note":cl_note})
                     if "Success" in res:
-                        wa_cleaning(saved_sec,saved_fir,fri_save,saved_nxt_sec,saved_nxt_fir)
-                        st.success("✅ تم! القادم: 🔵"+saved_nxt_sec+" + 🟢"+saved_nxt_fir)
+                        wa_cleaning(_sec,_fir,fri_save,_nxt_sec,_nxt_fir)
+                        st.success("✅ تم! القادم: 🔵"+_nxt_sec+" + 🟢"+_nxt_fir)
+                        # امسح init_key حتى تُعاد القيم من الـ Sheet في الـ rerun
+                        for k in list(st.session_state.keys()):
+                            if k.startswith("cl_init_") or k.startswith("s_s_") or k.startswith("s_f_"):
+                                del st.session_state[k]
                         clr(); st.rerun()
                     else: st.error("خطأ: "+res)
 
