@@ -267,7 +267,7 @@ def maybe_remind(rotation, next_gas):
 # ══════════════════════════════════════════════
 st.markdown("""<div class="app-header">
   <h1>🏠 تنظيم السكن</h1>
-  <p>إعداد أبو زين • تتبع وتوزيع المصاريف والأدوار بدقة وشفافية</p>
+  <p>إعداد أبو زين • تتبع وتوزيع الأدوار والمصاريف بدقة وشفافية</p>
 </div>""", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
@@ -538,23 +538,8 @@ with tab4:
             st.markdown("### 🗓️ جدول الدوران – الجمع القادمة")
             st.caption("🔵 = أسبوعه الثاني  |  🟢 = أسبوعه الأول  |  اختر من القوائم ثم اضغط حفظ")
 
-            # حفظ اختيارات القوائم في session_state مرتبطة بـ nextPair الأخير
-            # مفتاح الجلسة يتضمن nextPair حتى يتجدد بعد كل حفظ
-            last_np = cl_log[0].get("nextPair","") if cl_log else ""
-            ss_key  = "cl_sel_" + last_np.replace(" ","")
-
-            if ss_key not in st.session_state:
-                # ابنِ الاختيارات الافتراضية من الجدول
-                st.session_state[ss_key] = {
-                    str(i)+"_s": r["p_sec"] for i,r in enumerate(rotation)
-                }
-                st.session_state[ss_key].update({
-                    str(i)+"_f": r["p_fir"] for i,r in enumerate(rotation)
-                })
-
-            sel_store = st.session_state[ss_key]
-
-            # ── رسم الصفوف ──
+            # ── رسم الصفوف — الاقتراح دائماً من build_rotation مباشرة ──
+            # لا session_state للاختيارات — يضمن التطابق مع الـ Sheet بعد كل refresh
             saved_sec=None; saved_fir=None; saved_nxt_sec=None; saved_nxt_fir=None
             save_fri=None
 
@@ -562,6 +547,10 @@ with tab4:
                 is_cur  = r["is_cur"]
                 fri_str = r["fri_str"]
                 skipped = r["skipped"]
+                # الاقتراح من build_rotation مباشرة
+                sug_s = r["p_sec"] if r["p_sec"] not in ("—","") and r["p_sec"] in SHABAB else (SHABAB[0] if SHABAB else "")
+                sug_f = r["p_fir"] if r["p_fir"] not in ("—","") and r["p_fir"] in SHABAB else (SHABAB[1] if len(SHABAB)>1 else "")
+
                 bg   = "#0a1f14" if is_cur else "#141824"
                 bord = "2px solid #4ade80" if is_cur else "1px solid #2a2f45"
                 fcol = "#4ade80" if is_cur else "#8892b0"
@@ -575,23 +564,18 @@ with tab4:
                     unsafe_allow_html=True)
 
                 cs,cf2=st.columns([2,2])
-                sk_s = str(i)+"_s"; sk_f = str(i)+"_f"
-                cur_s = sel_store.get(sk_s, r["p_sec"])
-                cur_f = sel_store.get(sk_f, r["p_fir"])
 
                 with cs:
-                    idx_s = SHABAB.index(cur_s) if cur_s in SHABAB else 0
+                    idx_s = SHABAB.index(sug_s) if sug_s in SHABAB else 0
                     sel_s = st.selectbox("🔵 أسبوعه الثاني", SHABAB,
                                          index=idx_s, key="s_s_"+str(i))
-                    sel_store[sk_s] = sel_s
 
                 with cf2:
                     fopts = [p for p in SHABAB if p!=sel_s] or SHABAB
-                    cur_f2 = cur_f if cur_f in fopts else fopts[0]
-                    idx_f = fopts.index(cur_f2)
+                    sug_f2 = sug_f if sug_f in fopts else fopts[0]
+                    idx_f = fopts.index(sug_f2)
                     sel_f = st.selectbox("🟢 أسبوعه الأول", fopts,
                                          index=idx_f, key="s_f_"+str(i))
-                    sel_store[sk_f] = sel_f
 
                 if skipped:
                     st.markdown('<div style="color:#6b7280;font-size:.72rem;">⏭️ تخطي: '+"، ".join(skipped)+'</div>',unsafe_allow_html=True)
@@ -601,6 +585,7 @@ with tab4:
                 # اجمع بيانات الحفظ من أول صفين
                 if i==0: saved_sec=sel_s; saved_fir=sel_f; save_fri=r["fri"]
                 if i==1: saved_nxt_sec=sel_s; saved_nxt_fir=sel_f
+
 
             # ── زر الحفظ أسفل الجدول ──
             st.markdown("---")
@@ -623,9 +608,6 @@ with tab4:
                     if "Success" in res:
                         wa_cleaning(saved_sec,saved_fir,fri_save,saved_nxt_sec,saved_nxt_fir)
                         st.success("✅ تم! القادم: 🔵"+saved_nxt_sec+" + 🟢"+saved_nxt_fir)
-                        # امسح اختيارات الجلسة حتى يتجدد من الـ Sheet
-                        for k in list(st.session_state.keys()):
-                            if k.startswith("cl_sel_"): del st.session_state[k]
                         clr(); st.rerun()
                     else: st.error("خطأ: "+res)
 
