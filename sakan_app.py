@@ -7,11 +7,8 @@ import calendar
 from PIL import Image
 import io
 
-# ─────────────────────────────────────────────
-#  إعدادات الصفحة
-# ─────────────────────────────────────────────
-st.set_page_config(page_title="تنظيم السكن", page_icon="🏠", layout="wide",
-                   initial_sidebar_state="collapsed")
+st.set_page_config(page_title="تنظيم السكن", page_icon="🏠",
+                   layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
@@ -19,1198 +16,852 @@ st.markdown("""
 html,body,[class*="css"]{font-family:'Tajawal',sans-serif!important;direction:rtl}
 .main{background:#0f1117}
 .stat-card{background:linear-gradient(135deg,#1e2130,#252840);border:1px solid #2e3250;
-  border-radius:16px;padding:20px;text-align:center;margin-bottom:16px;
-  box-shadow:0 4px 20px rgba(0,0,0,.3)}
+  border-radius:16px;padding:20px;text-align:center;margin-bottom:16px}
 .stat-card .value{font-size:1.8rem;font-weight:800;color:#fff}
 .stat-card .label{font-size:.85rem;color:#8892b0;margin-top:4px}
-.person-row{display:flex;align-items:center;justify-content:space-between;
-  background:#1a1e2e;border:1px solid #2a2f45;border-radius:12px;
-  padding:14px 20px;margin-bottom:10px;direction:rtl}
-.person-name{font-weight:700;font-size:1rem;color:#e0e6ff}
-.person-paid{font-size:.85rem;color:#7ecfb3}
+.person-row{display:flex;align-items:center;justify-content:space-between;background:#1a1e2e;
+  border:1px solid #2a2f45;border-radius:12px;padding:14px 20px;margin-bottom:10px;direction:rtl}
 .badge-green{background:#0d3b2e;color:#4ade80;border:1px solid #166534;border-radius:20px;padding:4px 14px;font-weight:700;font-size:.85rem}
 .badge-red{background:#3b0d0d;color:#f87171;border:1px solid #991b1b;border-radius:20px;padding:4px 14px;font-weight:700;font-size:.85rem}
 .badge-vacation{background:#1a2e3b;color:#60a5fa;border:1px solid #1d4ed8;border-radius:20px;padding:4px 14px;font-weight:700;font-size:.85rem}
 .badge-zero{background:#2a2a2a;color:#aaa;border:1px solid #444;border-radius:20px;padding:4px 14px;font-weight:700;font-size:.85rem}
 .whatsapp-box{background:#0a1a0f;border:1px solid #166534;border-radius:12px;padding:20px;
   font-family:'Tajawal',monospace;white-space:pre-wrap;color:#4ade80;font-size:.95rem;direction:rtl}
-.app-header{background:linear-gradient(135deg,#1a237e,#283593 50%,#1565c0);
-  border-radius:20px;padding:30px;text-align:center;margin-bottom:30px;
-  box-shadow:0 8px 32px rgba(26,35,126,.4)}
+.app-header{background:linear-gradient(135deg,#1a237e,#283593 50%,#1565c0);border-radius:20px;
+  padding:30px;text-align:center;margin-bottom:30px}
 .app-header h1{color:#fff;font-size:2rem;font-weight:800;margin:0}
 .app-header p{color:#90caf9;margin:8px 0 0;font-size:.95rem}
 .stTabs [data-baseweb="tab-list"]{gap:8px}
-.stTabs [data-baseweb="tab"]{background:#1a1e2e;border-radius:10px;border:1px solid #2e3250;
-  color:#8892b0;font-family:'Tajawal',sans-serif;font-weight:600}
-.stTabs [aria-selected="true"]{background:linear-gradient(135deg,#1a237e,#1565c0)!important;
-  color:#fff!important;border-color:#1565c0!important}
-.vacation-notice{background:#0d1f3c;border:1px solid #1d4ed8;border-right:4px solid #60a5fa;
-  border-radius:10px;padding:12px 16px;color:#93c5fd;font-size:.9rem;margin-bottom:8px}
-.info-box{background:#0d1f3c;border:1px solid #1d4ed8;border-radius:10px;
-  padding:14px 18px;color:#93c5fd;margin-bottom:20px}
-.rule-box{background:#1a1a0d;border:1px solid #854d0e;border-radius:10px;
-  padding:14px 18px;color:#fde047;margin-bottom:20px;font-size:.9rem}
-.exempt-badge{background:#2a1a0d;color:#fbbf24;border:1px solid #854d0e;
-  border-radius:20px;padding:3px 12px;font-size:.8rem;font-weight:700}
-.next-badge{background:#0d3b2e;color:#4ade80;border:1px solid #166534;
-  border-radius:20px;padding:3px 12px;font-size:.8rem;font-weight:700}
-</style>
-""", unsafe_allow_html=True)
+.stTabs [data-baseweb="tab"]{background:#1a1e2e;border-radius:10px;border:1px solid #2e3250;color:#8892b0;font-weight:600}
+.stTabs [aria-selected="true"]{background:linear-gradient(135deg,#1a237e,#1565c0)!important;color:#fff!important;border-color:#1565c0!important}
+.info-box{background:#0d1f3c;border:1px solid #1d4ed8;border-radius:10px;padding:14px 18px;color:#93c5fd;margin-bottom:20px}
+.rule-box{background:#1a1a0d;border:1px solid #854d0e;border-radius:10px;padding:14px 18px;color:#fde047;margin-bottom:20px;font-size:.9rem}
+.vacation-notice{background:#0d1f3c;border:1px solid #1d4ed8;border-right:4px solid #60a5fa;border-radius:10px;padding:12px 16px;color:#93c5fd;font-size:.9rem;margin-bottom:8px}
+</style>""", unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
+# ══════════════════════════════════════════════
 #  الثوابت
-# ─────────────────────────────────────────────
-SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT_URL    = "https://script.google.com/macros/s/AKfycby3MkIel9ckC5CINRTXc0byW49ezeiItz9xZHIHHmfkDJRdbDW156_UqgjXkyGpIPrn/exec"
+# ══════════════════════════════════════════════
+SHEET_CSV = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
+SCRIPT    = "https://script.google.com/macros/s/AKfycbwKm_8NLqOrFWc-2MD0a3e6RQAFX6GYsCK37v-2LnnPXdbOb_EqKOb-ucFLk9XGlaV_/exec"
 MONTHS_AR = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
              "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
              "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
-DAYS_AR = ["الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت","الأحد"]
 
-# ─────────────────────────────────────────────
-#  واتساب – Green API
-# ─────────────────────────────────────────────
-def _wa_cfg():
-    try:
-        return {"instance": st.secrets["GREEN_API_INSTANCE"],
-                "token":    st.secrets["GREEN_API_TOKEN"],
-                "chat_id":  st.secrets["GREEN_API_CHAT_ID"]}
-    except Exception:
-        return None
+def next_friday():
+    t = date.today(); d = (4 - t.weekday()) % 7
+    return t + timedelta(days=d if d else 7)
 
-def send_whatsapp(msg: str) -> bool:
-    cfg = _wa_cfg()
-    if not cfg:
-        return False
-    try:
-        url  = f"https://api.green-api.com/waInstance{cfg['instance']}/sendMessage/{cfg['token']}"
-        resp = requests.post(url, json={"chatId": cfg["chat_id"], "message": msg}, timeout=15)
-        return resp.status_code == 200
-    except Exception:
-        return False
+# ══════════════════════════════════════════════
+#  واتساب
+# ══════════════════════════════════════════════
+def _wacfg():
+    try: return {"i":st.secrets["GREEN_API_INSTANCE"],"t":st.secrets["GREEN_API_TOKEN"],"c":st.secrets["GREEN_API_CHAT_ID"]}
+    except: return None
 
-def _now():
-    return datetime.now().strftime("%Y-%m-%d %H:%M")
+def wa(msg):
+    cfg = _wacfg()
+    if not cfg: return
+    try: requests.post("https://api.green-api.com/waInstance"+cfg["i"]+"/sendMessage/"+cfg["t"],
+                       json={"chatId":cfg["c"],"message":msg},timeout=15)
+    except: pass
 
-def wa_expense_add(name, amount, note, month):
-    send_whatsapp("🏠 *تنظيم السكن*\n➕ مصروف جديد\n"
-                  f"👤 {name}  |  💰 {float(amount):.3f}\n📝 {note}  |  📅 {month}\n🕐 {_now()}")
+def _now(): return datetime.now().strftime("%Y-%m-%d %H:%M")
 
-def wa_expense_edit(amount, note):
-    send_whatsapp("🏠 *تنظيم السكن*\n✏️ تعديل مصروف\n"
-                  f"💰 المبلغ الجديد: {float(amount):.3f}  |  📝 {note}\n🕐 {_now()}")
+def wa_add_expense(name,amt,note,month):  wa("🏠 *تنظيم السكن*\n➕ مصروف جديد\n👤 "+name+"  |  💰 "+str(round(float(amt),3))+"\n📝 "+note+"  |  📅 "+month+"\n🕐 "+_now())
+def wa_edit_expense(amt,note):            wa("🏠 *تنظيم السكن*\n✏️ تعديل مصروف\n💰 "+str(round(float(amt),3))+"  |  📝 "+note+"\n🕐 "+_now())
+def wa_del_expense(rid):                  wa("🏠 *تنظيم السكن*\n🗑️ حذف مصروف\n🔑 "+rid+"\n🕐 "+_now())
+def wa_vac(name,vt,month):
+    vta={"full":"إجازة كاملة 🏖️","from_start":"غياب من البداية 🗓️","from_date":"إجازة من تاريخ 📅","deduct":"خصم مبلغ ➖","none":"إلغاء الإجازة ✅"}.get(vt,vt)
+    wa("🏠 *تنظيم السكن*\n🏖️ تحديث إجازة\n👤 "+name+"  |  "+vta+"\n📅 "+month+"\n🕐 "+_now())
+def wa_cleaning(sec,fir,fri_str,nsec,nfir):
+    wa("🏠 *تنظيم السكن*\n🧹 تسجيل التنظيف\n🔵 "+sec+" (أسبوعه الثاني)\n🟢 "+fir+" (أسبوعه الأول)\n📅 الجمعة "+fri_str+"\n🔜 الدور القادم:\n   🔵 "+nsec+" (ثانيه)  +  🟢 "+nfir+" (أوله)\n🕐 "+_now())
+def wa_remind_cl(sec,fir,fri_str):        wa("🏠 *تنظيم السكن*\n🔔 تذكير التنظيف\n📅 الجمعة "+fri_str+"\n🔵 "+sec+" (أسبوعه الثاني)\n🟢 "+fir+" (أسبوعه الأول)\n🕐 "+_now())
+def wa_gas(filler,nxt):                   wa("🏠 *تنظيم السكن*\n🔵 ملء الأنبوبة\n👤 ملأ: *"+filler+"*\n🔜 الدور القادم: *"+nxt+"*\n🕐 "+_now())
+def wa_remind_gas(p):                     wa("🏠 *تنظيم السكن*\n🔔 تذكير الأنبوبة\n👤 عليه الدور: *"+p+"*\n🕐 "+_now())
+def wa_add_person(n):                     wa("🏠 *تنظيم السكن*\n👤 إضافة شخص: *"+n+"*\n🕐 "+_now())
+def wa_del_person(n):                     wa("🏠 *تنظيم السكن*\n🗑️ حذف شخص: *"+n+"*\n🕐 "+_now())
+def wa_rename(o,n):                       wa("🏠 *تنظيم السكن*\n✏️ تغيير اسم\n📛 "+o+" ← *"+n+"*\n🕐 "+_now())
+def wa_rent(amt):                         wa("🏠 *تنظيم السكن*\n🏠 تغيير الإيجار\n💰 الإيجار الجديد: *"+str(round(float(amt),3))+"*\n🕐 "+_now())
+def wa_exempt(n,svc,act):
+    s="التنظيف 🧹" if svc=="cleaning" else "الأنبوبة 🔵"
+    a="إعفاء 🚫" if act=="add" else "إلغاء إعفاء ✅"
+    wa("🏠 *تنظيم السكن*\n⚙️ "+a+" من "+s+"\n👤 "+n+"\n🕐 "+_now())
+def wa_return_vac(n,fri_str):             wa("🏠 *تنظيم السكن*\n✅ عودة من الإجازة\n👤 "+n+"\n📅 يبدأ الجمعة "+fri_str+"\n🕐 "+_now())
 
-def wa_expense_delete(row_id):
-    send_whatsapp(f"🏠 *تنظيم السكن*\n🗑️ حذف مصروف\n🔑 {row_id}\n🕐 {_now()}")
-
-def wa_vacation(name, vtype, month):
-    vt = {"full":"إجازة كاملة 🏖️","from_start":"غياب من أول الشهر 🗓️",
-          "from_date":"إجازة من تاريخ 📅","deduct":"خصم مبلغ ➖","none":"إلغاء الإجازة ✅"}.get(vtype, vtype)
-    send_whatsapp(f"🏠 *تنظيم السكن*\n🏖️ تحديث إجازة\n👤 {name}  |  {vt}\n📅 {month}\n🕐 {_now()}")
-
-def wa_cleaning(cleaner_second, cleaner_first, clean_date, next_second, next_first, note=""):
-    note_line = f"📝 {note}\n" if note else ""
-    send_whatsapp("🏠 *تنظيم السكن*\n🧹 تسجيل دور التنظيف\n"
-                  f"🔵 {cleaner_second} (أسبوعه الثاني)\n"
-                  f"🟢 {cleaner_first} (أسبوعه الأول)\n"
-                  f"📅 الجمعة {clean_date}\n"
-                  f"{note_line}"
-                  f"🔜 الدور القادم:\n"
-                  f"   🔵 {next_second} (ثانيه)  +  🟢 {next_first} (أوله)\n"
-                  f"🕐 {_now()}")
-
-def wa_gas(filler, next_person):
-    send_whatsapp("🏠 *تنظيم السكن*\n🔵 ملء الأنبوبة\n"
-                  f"👤 ملأ: *{filler}*\n🔜 الدور القادم: *{next_person}*\n🕐 {_now()}")
-
-def wa_person_add(name):
-    send_whatsapp(f"🏠 *تنظيم السكن*\n👤 إضافة شخص جديد: *{name}*\n🕐 {_now()}")
-
-def wa_person_delete(name):
-    send_whatsapp(f"🏠 *تنظيم السكن*\n🗑️ حذف شخص: *{name}*\n🕐 {_now()}")
-
-def wa_person_rename(old, new):
-    send_whatsapp(f"🏠 *تنظيم السكن*\n✏️ تغيير اسم\n📛 {old} ← *{new}*\n🕐 {_now()}")
-
-def wa_rent(amount):
-    send_whatsapp(f"🏠 *تنظيم السكن*\n🏠 تغيير الإيجار\n💰 الإيجار الجديد: *{float(amount):.3f}*\n🕐 {_now()}")
-
-def wa_exemption(name, service, action):
-    svc = "التنظيف 🧹" if service == "cleaning" else "الأنبوبة 🔵"
-    act = "إعفاء 🚫" if action == "add" else "إلغاء إعفاء ✅"
-    send_whatsapp(f"🏠 *تنظيم السكن*\n⚙️ {act} من {svc}\n👤 {name}\n🕐 {_now()}")
-
-# ─────────────────────────────────────────────
-#  دوال التحميل
-# ─────────────────────────────────────────────
+# ══════════════════════════════════════════════
+#  تحميل البيانات
+# ══════════════════════════════════════════════
 @st.cache_data(ttl=120)
 def load_persons():
     try:
-        data = requests.get(SCRIPT_URL + "?type=persons", timeout=10).json()
-        return sorted([d["name"] for d in data],
-                      key=lambda x: next((d["order"] for d in data if d["name"]==x), 99))
-    except:
-        return []
+        d=requests.get(SCRIPT+"?type=persons",timeout=10).json()
+        return sorted([x["name"] for x in d],key=lambda n:next((x["order"] for x in d if x["name"]==n),99))
+    except: return []
 
 def load_settings():
-    try:
-        return requests.get(SCRIPT_URL + "?type=settings", timeout=10).json()
-    except:
-        return {}
+    try: return requests.get(SCRIPT+"?type=settings",timeout=10).json()
+    except: return {}
 
-@st.cache_data(ttl=60)
-def load_vacations_from_sheet():
+@st.cache_data(ttl=30)
+def load_vac_sheet():
     try:
-        data = requests.get(SCRIPT_URL + "?type=vacations", timeout=10).json()
-        result = {}
-        for row in data:
-            m, n = row["month"], row["name"]
-            if m not in result: result[m] = {}
-            entry = {"type": row["vtype"]}
-            if row.get("days"):      entry["days"]         = int(row["days"])
-            if row.get("vacDate"):   entry["date"]          = _parse_date(row["vacDate"])
-            if row.get("deductAmt"): entry["deduct_amount"] = float(row["deductAmt"])
-            result[m][n] = entry
-        return result
-    except:
-        return {}
+        d=requests.get(SCRIPT+"?type=vacations",timeout=10).json()
+        r={}
+        for row in d:
+            m,n=row["month"],row["name"]
+            if m not in r: r[m]={}
+            e={"type":row["vtype"]}
+            if row.get("days"):      e["days"]=int(row["days"])
+            if row.get("vacDate"):   e["date"]=_pd(row["vacDate"])
+            if row.get("deductAmt"): e["deduct_amount"]=float(row["deductAmt"])
+            r[m][n]=e
+        return r
+    except: return {}
 
-def _parse_date(val):
-    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y"):
-        try: return datetime.strptime(str(val), fmt).date()
+def _pd(v):
+    for f in ("%Y-%m-%d","%m/%d/%Y","%d/%m/%Y"):
+        try: return datetime.strptime(str(v),f).date()
         except: pass
     return None
 
 @st.cache_data(ttl=60)
 def load_data():
     try:
-        df = pd.read_csv(f"{SHEET_CSV_URL}&cb={datetime.now().timestamp()}")
-        df["_row"]   = range(2, len(df)+2)
-        df["_rowId"] = (df["الشهر"].astype(str)+"|"+df["الاسم"].astype(str)+"|"+
-                        df["المبلغ"].astype(str)+"|"+df["التاريخ"].astype(str))
+        df=pd.read_csv(SHEET_CSV+"&cb="+str(datetime.now().timestamp()))
+        df["_row"]=range(2,len(df)+2)
+        df["_rowId"]=df["الشهر"].astype(str)+"|"+df["الاسم"].astype(str)+"|"+df["المبلغ"].astype(str)+"|"+df["التاريخ"].astype(str)
         return df
-    except:
-        return pd.DataFrame(columns=["الشهر","الاسم","المبلغ","البيان","التاريخ","الصورة","_row","_rowId"])
+    except: return pd.DataFrame(columns=["الشهر","الاسم","المبلغ","البيان","التاريخ","الصورة","_row","_rowId"])
+
+@st.cache_data(ttl=30)
+def load_cl():
+    try: return requests.get(SCRIPT+"?type=cleaning",timeout=15).json()
+    except: return []
+
+@st.cache_data(ttl=30)
+def load_gas():
+    try: return requests.get(SCRIPT+"?type=gas",timeout=15).json()
+    except: return []
 
 @st.cache_data(ttl=60)
-def load_cleaning_cached():
-    try:
-        return requests.get(SCRIPT_URL + "?type=cleaning", timeout=15).json()
-    except:
-        return []
-
-@st.cache_data(ttl=60)
-def load_gas_cached():
-    try:
-        return requests.get(SCRIPT_URL + "?type=gas", timeout=15).json()
-    except:
-        return []
-
-@st.cache_data(ttl=60)
-def load_exemptions_cached():
-    try:
-        return requests.get(SCRIPT_URL + "?type=exemptions", timeout=10).json()
-    except:
-        return {}
+def load_exempt():
+    try: return requests.get(SCRIPT+"?type=exemptions",timeout=10).json()
+    except: return {}
 
 def load_log():
-    try:
-        return requests.get(SCRIPT_URL + "?type=log", timeout=10).json()
-    except:
-        return []
+    try: return requests.get(SCRIPT+"?type=log",timeout=10).json()
+    except: return []
 
-def call_script(payload):
-    try:
-        return requests.post(SCRIPT_URL, data=payload, timeout=30).text
-    except Exception as e:
-        return f"Error: {e}"
+def api(payload):
+    try: return requests.post(SCRIPT,data=payload,timeout=30).text
+    except Exception as e: return "Error: "+str(e)
 
-def clear_all_cache():
-    st.cache_data.clear()
-    for k in ["gas_log", "cleaning_log"]:
-        st.session_state.pop(k, None)
+def clr(): st.cache_data.clear()
 
-# ─────────────────────────────────────────────
-#  منطق الخدمات
-# ─────────────────────────────────────────────
-def get_active_persons(persons, month_vacations, exemptions=None):
-    exempt_set = set(exemptions or [])
-    return [p for p in persons
-            if month_vacations.get(p, {}).get("type") != "full"
-            and p not in exempt_set]
+# ══════════════════════════════════════════════
+#  منطق التنظيف – مصدر حقيقة واحد
+# ══════════════════════════════════════════════
+def p_status(p, vac_month, cl_exempt):
+    if vac_month.get(p,{}).get("type")=="full": return "vacation"
+    if p in cl_exempt: return "exempt"
+    return "active"
 
-def get_next_gas(log, active):
-    if not active: return None
-    if not log: return active[0]
-    last = log[0].get("filler","")
-    if last in active:
-        return active[(active.index(last) + 1) % len(active)]
-    return active[0]
+def p_avail(p, vac_month, cl_exempt):
+    return p_status(p,vac_month,cl_exempt)=="active"
 
-def build_weekly_schedule(active):
+def next_avail_idx(persons, start, vac_month, cl_exempt, skip=None):
+    n=len(persons)
+    for off in range(n):
+        idx=(start+off)%n; p=persons[idx]
+        if p==skip: continue
+        if p_avail(p,vac_month,cl_exempt): return idx,p
+    return None,None
+
+def build_rotation(persons, vac_month, cl_exempt, cl_log, weeks=None):
     """
-    النظام: أسبوع k:
-      p_second = active[k % n]      ← عليه أسبوعه الثاني
-      p_first  = active[(k+1) % n]  ← عليه أسبوعه الأول
-    مثال 4 أشخاص (أ،ب،ج،د):
-      أسبوع1: أ(ثانيه)+ب(أوله) | أسبوع2: ب(ثانيه)+ج(أوله)
-      أسبوع3: ج(ثانيه)+د(أوله) | أسبوع4: د(ثانيه)+أ(أوله)
+    المصدر الوحيد للحقيقة لكل بيانات التنظيف.
+    يعيد list of dict — كل عنصر = جمعة واحدة.
     """
-    n = len(active)
-    if n == 0: return []
-    if n == 1: return [{"week_idx":0,"p_second":active[0],"p_first":None}]
-    return [{"week_idx":k,
-             "p_second": active[k % n],
-             "p_first":  active[(k+1) % n]}
-            for k in range(n)]
+    n=len(persons)
+    if not n: return []
+    if weeks is None: weeks=max(n,2)
 
-def get_next_cleaning_week(log, active):
-    """
-    يقرأ nextPair المحفوظ في السجل (p_second،p_first) ويبحث عنه في الجدول.
-    إذا لم يوجد → الأسبوع الأول من الجدول.
-    """
-    schedule = build_weekly_schedule(active)
-    if not schedule: return None
-    if not log:      return schedule[0]
+    # نقطة البداية
+    start_idx=0
+    if cl_log:
+        np=( cl_log[0].get("nextPair","") or "").strip()
+        if np:
+            parts=[x.strip() for x in np.split("،") if x.strip()]
+            p0=parts[0] if parts else None
+            if p0 and p0 in persons: start_idx=persons.index(p0)
 
-    last_next = log[0].get("nextPair","").strip()
-    if last_next:
-        parts    = [x.strip() for x in last_next.split("،") if x.strip()]
-        p_second = parts[0] if len(parts) > 0 else None
-        p_first  = parts[1] if len(parts) > 1 else None
-        for w in schedule:
-            if w["p_second"] == p_second and w["p_first"] == p_first:
-                return w
-        return {"week_idx":-1, "p_second":p_second, "p_first":p_first}
-
-    last_cleaners = sorted([x.strip() for x in log[0].get("cleaner","").split("،") if x.strip()])
-    for idx, w in enumerate(schedule):
-        if sorted([x for x in [w["p_second"], w["p_first"]] if x]) == last_cleaners:
-            return schedule[(idx+1) % len(schedule)]
-    return schedule[0]
-
-def build_rotation_table(all_persons, month_vacations, cleaning_exempt, log, weeks_ahead=10):
-    """
-    يبني جدول الجمع القادمة بذكاء:
-    - من في إجازة كاملة أو معفى → يُتخطى ويحل مكانه التالي المتاح.
-    - الدورة تستمر بلا توقف (تعود من الأول بعد الأخير).
-    - كل أسبوع: p_second (ثانيه) + p_first (أوله).
-    """
-    from datetime import timedelta
-    n = len(all_persons)
-    if n == 0:
-        return []
-
-    def is_avail(person):
-        if month_vacations.get(person,{}).get("type") == "full": return False
-        if person in cleaning_exempt: return False
-        return True
-
-    def p_status(person):
-        if not person: return "none"
-        if month_vacations.get(person,{}).get("type") == "full": return "vacation"
-        if person in cleaning_exempt: return "exempt"
-        return "active"
-
-    def next_avail(start_idx, skip=None):
-        for offset in range(n):
-            idx = (start_idx + offset) % n
-            p   = all_persons[idx]
-            if p == skip: continue
-            if is_avail(p): return idx, p
-        return None, None
-
-    def skipped_between(from_idx, to_idx, skip=None):
-        skipped = []
-        steps = (to_idx - from_idx) % n
-        for offset in range(steps):
-            p = all_persons[(from_idx + offset) % n]
-            if p != skip: skipped.append(p)
-        return skipped
-
-    # ── نقطة البداية من السجل ──
-    last_next = log[0].get("nextPair","").strip() if log else ""
-    if last_next:
-        parts = [x.strip() for x in last_next.split("،") if x.strip()]
-        p_sec_start = parts[0] if parts else None
-        start_second_idx = all_persons.index(p_sec_start) if p_sec_start and p_sec_start in all_persons else 0
-    else:
-        start_second_idx = 0
-
-    today       = date.today()
-    days_to_fri = (4 - today.weekday()) % 7
-    if days_to_fri == 0: days_to_fri = 7
-    next_fri = today + timedelta(days=days_to_fri)
-
-    rows = []
-    cur_sec_idx = start_second_idx
-
-    for i in range(weeks_ahead):
-        fri = next_fri + timedelta(weeks=i)
-
-        sec_idx, p_sec = next_avail(cur_sec_idx)
-        if sec_idx is None:
-            rows.append({"friday":fri,"fri_str":fri.strftime("%d/%m/%Y"),
-                         "p_second":"—","p_first":"—",
-                         "sec_status":"none","fir_status":"none",
-                         "is_current":(i==0),"sec_skipped":[],"fir_skipped":[]})
+    fri0=next_friday(); rows=[]; cur=start_idx
+    for i in range(weeks):
+        fri=fri0+timedelta(weeks=i)
+        si,ps=next_avail_idx(persons,cur,vac_month,cl_exempt)
+        if si is None:
+            rows.append({"fri":fri,"fri_str":fri.strftime("%d/%m/%Y"),
+                         "p_sec":"—","p_fir":"—","sec_st":"none","fir_st":"none",
+                         "is_cur":(i==0),"skipped":[]})
             continue
-
-        fir_idx, p_fir = next_avail((sec_idx+1)%n, skip=p_sec)
-
-        sec_skipped = skipped_between(cur_sec_idx, sec_idx)
-        fir_skipped = skipped_between((sec_idx+1)%n, fir_idx if fir_idx is not None else (sec_idx+1)%n, skip=p_sec) if fir_idx is not None else []
-
-        rows.append({
-            "friday":      fri,
-            "fri_str":     fri.strftime("%d/%m/%Y"),
-            "p_second":    p_sec or "—",
-            "p_first":     p_fir or "—",
-            "sec_status":  p_status(p_sec),
-            "fir_status":  p_status(p_fir),
-            "is_current":  (i == 0),
-            "sec_skipped": sec_skipped,
-            "fir_skipped": fir_skipped,
-        })
-
-        cur_sec_idx = (sec_idx + 1) % n
-
+        fi,pf=next_avail_idx(persons,(si+1)%n,vac_month,cl_exempt,skip=ps)
+        # من تم تخطيه
+        sk=[]
+        for off in range((si-cur)%n): sk.append(persons[(cur+off)%n])
+        if fi is not None:
+            ex=(si+1)%n
+            for off in range((fi-ex)%n):
+                c=persons[(ex+off)%n]
+                if c!=ps: sk.append(c)
+        rows.append({"fri":fri,"fri_str":fri.strftime("%d/%m/%Y"),
+                     "p_sec":ps,"p_fir":pf or "—",
+                     "sec_st":p_status(ps,vac_month,cl_exempt),
+                     "fir_st":p_status(pf,vac_month,cl_exempt) if pf else "none",
+                     "is_cur":(i==0),"skipped":list(dict.fromkeys(sk))})
+        cur=(si+1)%n
     return rows
 
-# ─────────────────────────────────────────────
+def get_next_gas(gas_log, persons, vac_month, gas_exempt):
+    active=[p for p in persons if vac_month.get(p,{}).get("type")!="full" and p not in gas_exempt]
+    if not active: return None
+    if not gas_log: return active[0]
+    np=gas_log[0].get("nextPerson","")
+    if np and np in active: return np
+    last=gas_log[0].get("filler","")
+    if last in active: return active[(active.index(last)+1)%len(active)]
+    return active[0]
+
+# ══════════════════════════════════════════════
+#  تذكيرات تلقائية (جمعة + يومين = ثلاثاء وخميس)
+# ══════════════════════════════════════════════
+def maybe_remind(rotation, next_gas):
+    today=date.today(); ts=today.strftime("%Y-%m-%d"); wd=today.weekday()
+    # جمعة=4، ثلاثاء=1، خميس=3
+    if wd not in (4,1,3): return
+    if rotation and st.session_state.get("last_cl_remind")!=ts:
+        r=rotation[0]
+        if r["p_sec"]!="—":
+            wa_remind_cl(r["p_sec"],r["p_fir"],r["fri_str"])
+            st.session_state["last_cl_remind"]=ts
+    if next_gas and st.session_state.get("last_gas_remind")!=ts:
+        wa_remind_gas(next_gas)
+        st.session_state["last_gas_remind"]=ts
+
+# ══════════════════════════════════════════════
 #  العنوان
-# ─────────────────────────────────────────────
-st.markdown("""
-<div class="app-header">
+# ══════════════════════════════════════════════
+st.markdown("""<div class="app-header">
   <h1>🏠 تنظيم السكن</h1>
   <p>إعداد أبو زين • تتبع وتوزيع المصاريف والأدوار بدقة وشفافية</p>
 </div>""", unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
-#  تحميل البيانات الأساسية
-# ─────────────────────────────────────────────
-SHABAB          = load_persons()
-all_data        = load_data()
-sheet_vacations = load_vacations_from_sheet()
-sheet_settings  = load_settings()
+# ══════════════════════════════════════════════
+#  تحميل – دائماً من الـ Sheet
+# ══════════════════════════════════════════════
+SHABAB   = load_persons()
+all_data = load_data()
+vac_all  = load_vac_sheet()   # الحقيقة من Sheet مباشرة
+settings = load_settings()
+ex_data  = load_exempt()
+cl_ex    = set(ex_data.get("cleaning",[]))
+gas_ex   = set(ex_data.get("gas",[]))
+cl_log   = load_cl()
+gas_log  = load_gas()
 
-# ── حفظ الإجازات في session_state لتفادي ضياعها عند refresh ──
-if "vacations" not in st.session_state or not st.session_state.vacations:
-    st.session_state.vacations = sheet_vacations.copy()
-# مزامنة: أضف أي شهر جديد من الـ sheet
-for m, v in sheet_vacations.items():
-    if m not in st.session_state.vacations:
-        st.session_state.vacations[m] = v
-
-# ── حفظ سجلات الخدمات في session_state ──
-if "cleaning_log" not in st.session_state:
-    st.session_state.cleaning_log = load_cleaning_cached()
-if "gas_log" not in st.session_state:
-    st.session_state.gas_log = load_gas_cached()
-
-cleaning_log = st.session_state.cleaning_log
-gas_log      = st.session_state.gas_log
-
-# ─────────────────────────────────────────────
-#  شريط الإعدادات العلوي
-# ─────────────────────────────────────────────
-current_date  = datetime.now()
-month_opts_ar = [f"{m:02d} – {MONTHS_AR[datetime(2026,m,1).strftime('%B')]} 2026" for m in range(1,13)]
-
-c1,c2,c3,c4,c5 = st.columns([2,1,1,1,1])
-with c1:
-    selected_month_ar = st.selectbox("📅 الشهر", month_opts_ar, index=current_date.month-1)
+# ══════════════════════════════════════════════
+#  شريط الإعدادات
+# ══════════════════════════════════════════════
+cur_date=datetime.now()
+month_opts=[f"{m:02d} – {MONTHS_AR[datetime(2026,m,1).strftime('%B')]} 2026" for m in range(1,13)]
+c1,c2,c3,c4,c5=st.columns([2,1,1,1,1])
+with c1: sel_month_ar=st.selectbox("📅 الشهر",month_opts,index=cur_date.month-1)
 with c2:
-    month_idx     = month_opts_ar.index(selected_month_ar)
-    sel_month     = month_idx + 1
-    sel_year      = 2026
-    days_in_month = calendar.monthrange(sel_year, sel_month)[1]
-    st.metric("📆 أيام الشهر", days_in_month)
+    mi=month_opts.index(sel_month_ar); sel_m=mi+1; sel_y=2026
+    dim=calendar.monthrange(sel_y,sel_m)[1]; st.metric("📆 أيام الشهر",dim)
 with c3:
-    _sheet_rent = float(sheet_settings.get("total_rent", 0.0))
-    total_rent_input = st.number_input("🏠 إجمالي الإيجار", min_value=0.0,
-                                       value=_sheet_rent, format="%.3f")
+    rent_val=float(settings.get("total_rent",0.0))
+    total_rent=st.number_input("🏠 إجمالي الإيجار",min_value=0.0,value=rent_val,format="%.3f")
 with c4:
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("💾 حفظ الإيجار", type="primary", use_container_width=True):
-        res = call_script({"action":"saveSetting","key":"total_rent","value":str(total_rent_input)})
-        if "Success" in res:
-            wa_rent(total_rent_input)
-            st.success("✅ تم الحفظ")
-            st.cache_data.clear()
-            st.rerun()
-        else:
-            st.error(res)
+    st.markdown("<br>",unsafe_allow_html=True)
+    if st.button("💾 حفظ الإيجار",type="primary",use_container_width=True):
+        res=api({"action":"saveSetting","key":"total_rent","value":str(total_rent)})
+        if "Success" in res: wa_rent(total_rent); st.success("✅"); clr(); st.rerun()
+        else: st.error(res)
 with c5:
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("🔄 تحديث", use_container_width=True):
-        clear_all_cache()
-        st.rerun()
+    st.markdown("<br>",unsafe_allow_html=True)
+    if st.button("🔄 تحديث",use_container_width=True): clr(); st.rerun()
 
-st.markdown("""<div class="rule-box">
-⚠️ <b>قاعدة التوزيع:</b>
-الإيجار يُقسَّم بالتساوي على <b>جميع الأشخاص</b> حتى من في إجازة. |
-المصاريف المشتركة تُوزَّع على <b>المتواجدين فقط</b> حسب نسبة حضورهم.
-</div>""", unsafe_allow_html=True)
+st.markdown("""<div class="rule-box">⚠️ <b>قاعدة التوزيع:</b>
+الإيجار يُقسَّم بالتساوي على <b>جميع الأشخاص</b>. المصاريف تُوزَّع على <b>المتواجدين</b> فقط.</div>""",unsafe_allow_html=True)
 st.divider()
 
-# ─────────────────────────────────────────────
-#  الإجازات والحسابات
-# ─────────────────────────────────────────────
-month_vacations = st.session_state.vacations.get(selected_month_ar, {})
+# ══════════════════════════════════════════════
+#  حسابات المصاريف
+# ══════════════════════════════════════════════
+vac_month=vac_all.get(sel_month_ar,{})
 
-def calc_expense_ratio(vac_info, dim, sy, sm):
-    vtype = vac_info.get("type","none")
-    if vtype == "full": return 0.0
-    elif vtype == "from_start":
-        absent = min(int(vac_info.get("days",0)), dim)
-        return max(0.0, (dim-absent)/dim)
-    elif vtype == "from_date":
-        vd = vac_info.get("date")
-        if vd:
-            present = max(0,(vd-date(sy,sm,1)).days)
-            return min(present,dim)/dim
+def exp_ratio(vi,dim,sy,sm):
+    vt=vi.get("type","none")
+    if vt=="full": return 0.0
+    if vt=="from_start": return max(0.0,(dim-min(int(vi.get("days",0)),dim))/dim)
+    if vt=="from_date":
+        vd=vi.get("date")
+        if vd: return min(max(0,(vd-date(sy,sm,1)).days),dim)/dim
         return 1.0
-    elif vtype == "deduct": return 1.0
+    if vt=="deduct": return 1.0
     return 1.0
 
-_raw = all_data[all_data["الشهر"]==selected_month_ar] if not all_data.empty else pd.DataFrame()
-month_df = _raw[pd.to_numeric(_raw["المبلغ"],errors='coerce').fillna(0)>0].copy() if not _raw.empty else pd.DataFrame()
-total_extra = pd.to_numeric(month_df["المبلغ"],errors='coerce').sum() if not month_df.empty else 0.0
+_raw=all_data[all_data["الشهر"]==sel_month_ar] if not all_data.empty else pd.DataFrame()
+mdf=_raw[pd.to_numeric(_raw["المبلغ"],errors='coerce').fillna(0)>0].copy() if not _raw.empty else pd.DataFrame()
+tot_exp=pd.to_numeric(mdf["المبلغ"],errors='coerce').sum() if not mdf.empty else 0.0
+er={}; dm={}; tr=0.0
+for p in SHABAB:
+    v=vac_month.get(p,{}); r=exp_ratio(v,dim,sel_y,sel_m)
+    er[p]=r; tr+=r; dm[p]=float(v.get("deduct_amount",0)) if v.get("type")=="deduct" else 0.0
+rpp=total_rent/len(SHABAB) if SHABAB else 0.0
 
-expense_ratios = {}; deduct_map = {}; total_ratio = 0.0
-for person in SHABAB:
-    vac = month_vacations.get(person,{})
-    r   = calc_expense_ratio(vac, days_in_month, sel_year, sel_month)
-    expense_ratios[person] = r; total_ratio += r
-    deduct_map[person] = float(vac.get("deduct_amount",0)) if vac.get("type")=="deduct" else 0.0
+def exp_share(p):
+    if tr==0: return 0.0
+    v=vac_month.get(p,{})
+    if v.get("type")=="deduct": return max(0.0,(er[p]/tr)*tot_exp-dm[p])
+    return (er[p]/tr)*tot_exp
 
-rent_per_person = total_rent_input/len(SHABAB) if SHABAB else 0.0
+summary=[]
+for p in SHABAB:
+    paid=pd.to_numeric(mdf[mdf["الاسم"]==p]["المبلغ"],errors='coerce').sum() if not mdf.empty else 0.0
+    es=exp_share(p); td=es+rpp; v=vac_month.get(p,{})
+    summary.append({"الاسم":p,"مدفوع":paid,"حصة":es,"إيجار":rpp,"مستحق":td,"رصيد":paid-td,
+                    "إجازة":v.get("type","none"),"نسبة":er[p]})
+ac=sum(1 for p in SHABAB if er[p]>0)
+if not SHABAB: st.warning("⚠️ لا يوجد أشخاص.")
 
-def get_expense_share(person):
-    if total_ratio==0: return 0.0
-    vac = month_vacations.get(person,{})
-    if vac.get("type")=="deduct":
-        return max(0.0,(expense_ratios[person]/total_ratio)*total_extra - deduct_map[person])
-    return (expense_ratios[person]/total_ratio)*total_extra
+# ══════════════════════════════════════════════
+#  بناء جدول التنظيف — المصدر الوحيد
+# ══════════════════════════════════════════════
+n_wks   = max(len(SHABAB),2)
+rotation= build_rotation(SHABAB, vac_month, cl_ex, cl_log, weeks=n_wks)
+nxt_gas = get_next_gas(gas_log, SHABAB, vac_month, gas_ex)
 
-summary = []
-for person in SHABAB:
-    paid      = pd.to_numeric(month_df[month_df["الاسم"]==person]["المبلغ"],errors='coerce').sum() if not month_df.empty else 0.0
-    exp_share = get_expense_share(person)
-    total_due = exp_share + rent_per_person
-    vac       = month_vacations.get(person,{})
-    summary.append({"الاسم":person,"مدفوع":paid,"حصة_مصاريف":exp_share,"إيجار":rent_per_person,
-                    "المستحق":total_due,"الرصيد":paid-total_due,
-                    "إجازة":vac.get("type","none"),"النسبة":expense_ratios[person]})
+# تذكيرات تلقائية
+maybe_remind(rotation, nxt_gas)
 
-active_count = sum(1 for p in SHABAB if expense_ratios[p]>0)
-
-if not SHABAB:
-    st.warning("⚠️ لا يوجد أشخاص مسجلون. اذهب إلى تبويب **⚙️ إدارة الأشخاص**.")
-
-# ─────────────────────────────────────────────
-#  المعفيون والأشخاص المتاحون
-# ─────────────────────────────────────────────
-exemptions_data = load_exemptions_cached()
-cleaning_exempt = set(exemptions_data.get("cleaning",[]))
-gas_exempt      = set(exemptions_data.get("gas",[]))
-
-active_for_cleaning = get_active_persons(SHABAB, month_vacations, cleaning_exempt)
-active_for_gas      = get_active_persons(SHABAB, month_vacations, gas_exempt)
-
-# ─────────────────────────────────────────────
-#  حساب الدورين الحالي والقادم
-# ─────────────────────────────────────────────
-next_gas_person  = get_next_gas(gas_log, active_for_gas)
-next_clean_week  = get_next_cleaning_week(cleaning_log, active_for_cleaning)
-
-# ── البطاقات العلوية ──
-# التنظيف: p_second = عليه ثانيه  |  p_first = عليه أوله
+# ══════════════════════════════════════════════
+#  بطاقات التنبيه — من rotation[0] مباشرة
+# ══════════════════════════════════════════════
 if SHABAB:
-    al1, al2 = st.columns(2)
-    with al1:
-        if next_clean_week:
-            _sec  = next_clean_week.get("p_second","—")
-            _fir  = next_clean_week.get("p_first","")
-            _disp = f"{_sec} و {_fir}" if _fir else _sec
-            _sub  = f"🔵 {_sec} (ثانيه)  |  🟢 {_fir} (أوله)" if _fir else f"🔵 {_sec} (ثانيه)"
-        else:
-            _disp = "—"; _sub = ""
-        st.markdown(f"""
-<div style="background:linear-gradient(135deg,#0d3b2e,#1a4a38);border:2px solid #4ade80;
-     border-radius:14px;padding:14px 20px;margin-bottom:10px;">
-  <div style="color:#86efac;font-size:.8rem;margin-bottom:2px;">🧹 دور التنظيف هذا الأسبوع</div>
-  <div style="color:#4ade80;font-size:1.4rem;font-weight:800;">{_disp}</div>
-  <div style="color:#6ee7b7;font-size:.8rem;margin-top:2px;">{_sub}</div>
-</div>""", unsafe_allow_html=True)
-    with al2:
-        _gname = next_gas_person or "—"
-        st.markdown(f"""
-<div style="background:linear-gradient(135deg,#0d1f3c,#1a2e4a);border:2px solid #60a5fa;
-     border-radius:14px;padding:14px 20px;margin-bottom:10px;">
-  <div style="color:#93c5fd;font-size:.8rem;margin-bottom:2px;">🔵 دور ملء الأنبوبة</div>
-  <div style="color:#60a5fa;font-size:1.4rem;font-weight:800;">{_gname}</div>
-  <div style="color:#7dd3fc;font-size:.8rem;margin-top:2px;">عليه الدور القادم</div>
-</div>""", unsafe_allow_html=True)
+    a1,a2=st.columns(2)
+    with a1:
+        r0=rotation[0] if rotation else None
+        _s=r0["p_sec"] if r0 else "—"; _f=r0["p_fir"] if r0 else "—"
+        _d=_s+(" و "+_f if _f and _f!="—" else "")
+        _b="🔵 "+_s+" (ثانيه)  |  🟢 "+(_f if _f and _f!="—" else "—")+" (أوله)"
+        st.markdown(
+            '<div style="background:linear-gradient(135deg,#0d3b2e,#1a4a38);border:2px solid #4ade80;'
+            'border-radius:14px;padding:14px 20px;margin-bottom:10px;">'
+            '<div style="color:#86efac;font-size:.8rem;">🧹 دور التنظيف هذه الجمعة</div>'
+            '<div style="color:#4ade80;font-size:1.4rem;font-weight:800;">'+_d+'</div>'
+            '<div style="color:#6ee7b7;font-size:.8rem;margin-top:2px;">'+_b+'</div>'
+            '</div>',unsafe_allow_html=True)
+    with a2:
+        _g=nxt_gas or "—"
+        st.markdown(
+            '<div style="background:linear-gradient(135deg,#0d1f3c,#1a2e4a);border:2px solid #60a5fa;'
+            'border-radius:14px;padding:14px 20px;margin-bottom:10px;">'
+            '<div style="color:#93c5fd;font-size:.8rem;">🔵 دور ملء الأنبوبة</div>'
+            '<div style="color:#60a5fa;font-size:1.4rem;font-weight:800;">'+_g+'</div>'
+            '<div style="color:#7dd3fc;font-size:.8rem;margin-top:2px;">عليه الدور القادم</div>'
+            '</div>',unsafe_allow_html=True)
     st.divider()
 
-# ─────────────────────────────────────────────
+# ══════════════════════════════════════════════
 #  التبويبات
-# ─────────────────────────────────────────────
-tab1,tab2,tab3,tab4,tab5,tab6,tab7 = st.tabs([
+# ══════════════════════════════════════════════
+tab1,tab2,tab3,tab4,tab5,tab6,tab7=st.tabs([
     "📊 الملخص","➕ إضافة مصروف","📜 سجل المصاريف",
     "🏠 خدمات الشقة","🏖️ الإجازات","⚙️ إدارة الأشخاص","📋 سجل الأحداث"])
 
-# ══════════════════════════════════════════════
-#  ١: الملخص
-# ══════════════════════════════════════════════
+# ── ١ الملخص ──────────────────────────────────
 with tab1:
-    if not SHABAB:
-        st.info("أضف أشخاصاً أولاً.")
+    if not SHABAB: st.info("أضف أشخاصاً أولاً.")
     else:
-        s1,s2,s3,s4,s5 = st.columns(5)
-        s1.markdown(f'<div class="stat-card"><div class="value">{total_extra:.3f}</div><div class="label">💰 إجمالي المصاريف</div></div>',unsafe_allow_html=True)
-        s2.markdown(f'<div class="stat-card"><div class="value">{total_rent_input:.3f}</div><div class="label">🏠 إجمالي الإيجار</div></div>',unsafe_allow_html=True)
-        s3.markdown(f'<div class="stat-card"><div class="value">{rent_per_person:.3f}</div><div class="label">👤 إيجار الفرد</div></div>',unsafe_allow_html=True)
-        s4.markdown(f'<div class="stat-card"><div class="value">{total_extra+total_rent_input:.3f}</div><div class="label">📊 الإجمالي الكلي</div></div>',unsafe_allow_html=True)
-        s5.markdown(f'<div class="stat-card"><div class="value">{active_count}/{len(SHABAB)}</div><div class="label">👥 المتواجدون</div></div>',unsafe_allow_html=True)
-
+        c=[st.columns(5)[i] for i in range(5)]
+        for ci,val,lbl in zip(c,[tot_exp,total_rent,rpp,tot_exp+total_rent,f"{ac}/{len(SHABAB)}"],
+                              ["💰 إجمالي المصاريف","🏠 إجمالي الإيجار","👤 إيجار الفرد","📊 الإجمالي الكلي","👥 المتواجدون"]):
+            ci.markdown(f'<div class="stat-card"><div class="value">{val:.3f if isinstance(val,float) else val}</div><div class="label">{lbl}</div></div>',unsafe_allow_html=True)
         st.markdown("### 👥 وضع كل شخص")
         for row in summary:
-            bal=row["الرصيد"]; vtype=row["إجازة"]
-            if vtype and vtype!="none":
-                vl={"full":"🏖️ إجازة كاملة","from_start":f"🗓️ مصاريف {row['النسبة']*100:.0f}%",
-                    "from_date":f"📅 مصاريف {row['النسبة']*100:.0f}%","deduct":"➖ خصم"}.get(vtype,"")
-                badge=f'<span class="badge-vacation">{vl} + إيجار كامل</span>'
-            elif abs(bal)<0.01: badge='<span class="badge-zero">➖ صفر</span>'
-            elif bal>0:         badge=f'<span class="badge-green">🟢 له {bal:.3f}</span>'
-            else:               badge=f'<span class="badge-red">🔴 عليه {abs(bal):.3f}</span>'
-            details=f"دفع: {row['مدفوع']:.3f} | مصاريف: {row['حصة_مصاريف']:.3f} | إيجار: {row['إيجار']:.3f} | المستحق: {row['المستحق']:.3f}"
-            st.markdown(f'<div class="person-row"><span class="person-name">{row["الاسم"]}</span><span class="person-paid">{details}</span>{badge}</div>',unsafe_allow_html=True)
-
+            b=row["رصيد"]; vt=row["إجازة"]
+            if vt and vt!="none":
+                vl={"full":"🏖️ إجازة كاملة","from_start":f"🗓️ مصاريف {row['نسبة']*100:.0f}%",
+                    "from_date":f"📅 مصاريف {row['نسبة']*100:.0f}%","deduct":"➖ خصم"}.get(vt,"")
+                bg=f'<span class="badge-vacation">{vl} + إيجار كامل</span>'
+            elif abs(b)<0.01: bg='<span class="badge-zero">➖ صفر</span>'
+            elif b>0:         bg=f'<span class="badge-green">🟢 له {b:.3f}</span>'
+            else:             bg=f'<span class="badge-red">🔴 عليه {abs(b):.3f}</span>'
+            dt=f"دفع: {row['مدفوع']:.3f} | مصاريف: {row['حصة']:.3f} | إيجار: {row['إيجار']:.3f} | المستحق: {row['مستحق']:.3f}"
+            st.markdown(f'<div class="person-row"><span style="font-weight:700;color:#e0e6ff">{row["الاسم"]}</span><span style="font-size:.85rem;color:#7ecfb3">{dt}</span>{bg}</div>',unsafe_allow_html=True)
         st.markdown("### 📱 تقرير الواتساب")
-        lines=[f"*تقرير مصاريف السكن – {selected_month_ar}*",
-               f"🏠 الإيجار الكلي: {total_rent_input:.3f} (على كل فرد: {rent_per_person:.3f})",
-               f"💰 إجمالي المصاريف: {total_extra:.3f}",
-               f"📊 الإجمالي الكلي: {total_extra+total_rent_input:.3f}","─────────────────"]
+        lines=[f"*تقرير مصاريف السكن – {sel_month_ar}*",
+               f"🏠 الإيجار: {total_rent:.3f} (فرد: {rpp:.3f})",
+               f"💰 المصاريف: {tot_exp:.3f}",f"📊 الكلي: {tot_exp+total_rent:.3f}","─────────────"]
         for row in summary:
-            bal=row["الرصيد"]; vtype=row["إجازة"]
-            status="له 🟢" if bal>0 else ("عليه 🔴" if bal<0 else "صفر ➖")
-            note="" 
-            if vtype=="full": note=" (إجازة)"
-            elif vtype in("from_start","from_date"): note=f" (مصاريف {row['النسبة']*100:.0f}%)"
-            elif vtype=="deduct": note=" (خصم)"
-            lines.append(f"• {row['الاسم']}{note}: {status} *{abs(bal):.3f}*")
-        report_text="\n".join(lines)
-        st.markdown(f'<div class="whatsapp-box">{report_text}</div>',unsafe_allow_html=True)
-        st.button("📋 نسخ التقرير",help="انسخ النص أعلاه يدوياً")
+            b=row["رصيد"]; vt=row["إجازة"]
+            st2="له 🟢" if b>0 else ("عليه 🔴" if b<0 else "صفر ➖")
+            nt=(" (إجازة)" if vt=="full" else f" (مصاريف {row['نسبة']*100:.0f}%)" if vt in("from_start","from_date") else " (خصم)" if vt=="deduct" else "")
+            lines.append(f"• {row['الاسم']}{nt}: {st2} *{abs(b):.3f}*")
+        st.markdown('<div class="whatsapp-box">'+"\n".join(lines)+'</div>',unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════
-#  ٢: إضافة مصروف
-# ══════════════════════════════════════════════
+# ── ٢ إضافة مصروف ─────────────────────────────
 with tab2:
-    if not SHABAB:
-        st.info("أضف أشخاصاً أولاً.")
+    if not SHABAB: st.info("أضف أشخاصاً أولاً.")
     else:
-        col_form,col_recent = st.columns([1,1])
-        with col_form:
+        cf,cr=st.columns([1,1])
+        with cf:
             st.subheader("➕ تسجيل مصروف جديد")
-            with st.form("add_form", clear_on_submit=True):
-                name         = st.selectbox("من دفع؟", SHABAB)
-                amount       = st.number_input("المبلغ", min_value=0.0, step=0.1, format="%.3f")
-                note         = st.text_input("البيان", placeholder="مثال: شاي، سكر…")
-                expense_date = st.date_input("التاريخ", value=date.today())
-                uploaded_img = st.file_uploader("📸 صورة الفاتورة (اختياري)", type=["png","jpg","jpeg"])
-                if st.form_submit_button("✅ تسجيل", use_container_width=True):
-                    if amount>0:
-                        img_b64,img_name="",""
-                        if uploaded_img:
-                            img_name=uploaded_img.name
+            with st.form("add_exp",clear_on_submit=True):
+                nm=st.selectbox("من دفع؟",SHABAB)
+                am=st.number_input("المبلغ",min_value=0.0,step=0.1,format="%.3f")
+                nt=st.text_input("البيان",placeholder="مثال: شاي، سكر…")
+                ed=st.date_input("التاريخ",value=date.today())
+                ui=st.file_uploader("📸 صورة الفاتورة",type=["png","jpg","jpeg"])
+                if st.form_submit_button("✅ تسجيل",use_container_width=True):
+                    if am>0:
+                        ib,inm="",""
+                        if ui:
+                            inm=ui.name
                             try:
-                                img=Image.open(uploaded_img)
+                                img=Image.open(ui)
                                 if img.mode in("RGBA","P"): img=img.convert("RGB")
-                                img.thumbnail((800,800))
-                                buf=io.BytesIO(); img.save(buf,format="JPEG",quality=70)
-                                img_b64=base64.b64encode(buf.getvalue()).decode()
-                            except Exception as ex:
-                                st.error(f"خطأ في الصورة: {ex}")
-                        with st.spinner("جاري الحفظ…"):
-                            res=call_script({"action":"addExpense","month":selected_month_ar,"name":name,
-                                             "amount":amount,"note":note,"date":str(expense_date),
-                                             "imgData":img_b64,"imgName":img_name})
+                                img.thumbnail((800,800)); buf=io.BytesIO()
+                                img.save(buf,format="JPEG",quality=70)
+                                ib=base64.b64encode(buf.getvalue()).decode()
+                            except: pass
+                        with st.spinner("حفظ…"):
+                            res=api({"action":"addExpense","month":sel_month_ar,"name":nm,
+                                     "amount":am,"note":nt,"date":str(ed),"imgData":ib,"imgName":inm})
                         if "Success" in res:
-                            wa_expense_add(name,amount,note,selected_month_ar)
-                            st.success("✅ تم التسجيل!"); st.balloons()
-                            st.cache_data.clear(); st.rerun()
-                        else:
-                            st.error(f"رد الخادم: {res}")
-                    else:
-                        st.warning("⚠️ أدخل مبلغاً صحيحاً.")
-        with col_recent:
+                            wa_add_expense(nm,am,nt,sel_month_ar); st.success("✅"); st.balloons(); clr(); st.rerun()
+                        else: st.error(res)
+                    else: st.warning("⚠️ أدخل مبلغاً صحيحاً.")
+        with cr:
             st.subheader("🕐 آخر المصاريف")
-            if not month_df.empty:
-                for _,row in month_df.tail(6).iloc[::-1].iterrows():
+            if not mdf.empty:
+                for _,row in mdf.tail(6).iloc[::-1].iterrows():
                     st.info(f"**{row['الاسم']}** | {float(row['المبلغ']):.3f} | {row['البيان']}")
-            else:
-                st.info("لا توجد مصاريف بعد.")
+            else: st.info("لا توجد مصاريف بعد.")
 
-# ══════════════════════════════════════════════
-#  ٣: سجل المصاريف
-# ══════════════════════════════════════════════
+# ── ٣ سجل المصاريف ────────────────────────────
 with tab3:
-    st.subheader(f"📜 سجل مصاريف {selected_month_ar}")
-    filter_name=st.selectbox("فلتر باسم",["الكل"]+SHABAB,key="filter_name")
-    display_df=month_df.copy() if not month_df.empty else pd.DataFrame()
-    if filter_name!="الكل" and not display_df.empty:
-        display_df=display_df[display_df["الاسم"]==filter_name]
-    if not display_df.empty:
-        st.metric("إجمالي المبالغ المعروضة",f"{pd.to_numeric(display_df['المبلغ'],errors='coerce').sum():.3f}")
-        for idx,row in display_df.iloc[::-1].iterrows():
-            amount_val=float(row["المبلغ"]) if pd.notna(row["المبلغ"]) else 0.0
-            row_num=int(row["_row"]) if "_row" in row else None
-            row_id=str(row["_rowId"]) if "_rowId" in row else ""
-            with st.expander(f"📌 {row['الاسم']}  |  {amount_val:.3f}  |  {row['البيان']}"):
-                ca,cb=st.columns(2)
-                ca.write(f"**التاريخ:** {row['التاريخ']}")
-                ca.write(f"**الشهر:** {row['الشهر']}")
-                img_link=str(row['الصورة']).strip()
-                if img_link.startswith("http"): cb.link_button("🖼️ فتح صورة الفاتورة",img_link)
+    st.subheader(f"📜 سجل مصاريف {sel_month_ar}")
+    fn=st.selectbox("فلتر باسم",["الكل"]+SHABAB,key="fn")
+    ddf=mdf.copy() if not mdf.empty else pd.DataFrame()
+    if fn!="الكل" and not ddf.empty: ddf=ddf[ddf["الاسم"]==fn]
+    if not ddf.empty:
+        st.metric("إجمالي",f"{pd.to_numeric(ddf['المبلغ'],errors='coerce').sum():.3f}")
+        for idx,row in ddf.iloc[::-1].iterrows():
+            av=float(row["المبلغ"]) if pd.notna(row["المبلغ"]) else 0.0
+            rn=int(row["_row"]) if "_row" in row else None
+            ri=str(row["_rowId"]) if "_rowId" in row else ""
+            with st.expander(f"📌 {row['الاسم']}  |  {av:.3f}  |  {row['البيان']}"):
+                ca,cb=st.columns(2); ca.write(f"**التاريخ:** {row['التاريخ']}"); ca.write(f"**الشهر:** {row['الشهر']}")
+                il=str(row['الصورة']).strip()
+                if il.startswith("http"): cb.link_button("🖼️ فتح الفاتورة",il)
                 else: cb.caption("⚠️ لا توجد صورة")
-                if row_num:
-                    st.markdown("---")
-                    ec1,ec2=st.columns(2)
-                    with ec1:
+                if rn:
+                    st.markdown("---"); e1,e2=st.columns(2)
+                    with e1:
                         st.markdown("**✏️ تعديل**")
-                        na=st.number_input("المبلغ الجديد",value=amount_val,format="%.3f",key=f"ea_{idx}")
-                        nn=st.text_input("البيان الجديد",value=str(row['البيان']),key=f"en_{idx}")
-                        nd=st.text_input("التاريخ الجديد",value=str(row['التاريخ']),key=f"ed_{idx}")
-                        if st.button("💾 حفظ التعديل",key=f"se_{idx}"):
-                            with st.spinner("تعديل…"):
-                                res=call_script({"action":"editExpense","row":row_num,"rowId":row_id,
-                                                 "amount":na,"note":nn,"date":nd})
-                            if "Success" in res:
-                                wa_expense_edit(na,nn)
-                                st.success("✅ تم التعديل!")
-                                st.cache_data.clear(); st.rerun()
+                        na2=st.number_input("مبلغ جديد",value=av,format="%.3f",key=f"ea{idx}")
+                        nn2=st.text_input("بيان جديد",value=str(row['البيان']),key=f"en{idx}")
+                        nd2=st.text_input("تاريخ جديد",value=str(row['التاريخ']),key=f"ed{idx}")
+                        if st.button("💾 حفظ",key=f"se{idx}"):
+                            res=api({"action":"editExpense","row":rn,"rowId":ri,"amount":na2,"note":nn2,"date":nd2})
+                            if "Success" in res: wa_edit_expense(na2,nn2); st.success("✅"); clr(); st.rerun()
                             else: st.error(res)
-                    with ec2:
-                        st.markdown("**🗑️ حذف**")
-                        st.warning("لا يمكن التراجع عن الحذف!")
-                        if st.button("🗑️ حذف",key=f"dl_{idx}",type="primary"):
-                            with st.spinner("حذف…"):
-                                res=call_script({"action":"deleteExpense","row":row_num,"rowId":row_id})
-                            if "Success" in res:
-                                wa_expense_delete(row_id)
-                                st.success("✅ تم الحذف!")
-                                st.cache_data.clear(); st.rerun()
+                    with e2:
+                        st.markdown("**🗑️ حذف**"); st.warning("لا يمكن التراجع!")
+                        if st.button("🗑️ حذف",key=f"dl{idx}",type="primary"):
+                            res=api({"action":"deleteExpense","row":rn,"rowId":ri})
+                            if "Success" in res: wa_del_expense(ri); st.success("✅"); clr(); st.rerun()
                             else: st.error(res)
-    else:
-        st.info("لا توجد مصاريف مسجلة لهذا الشهر.")
-    if not month_df.empty:
-        st.divider()
-        st.markdown("**📊 إجماليات كل شخص:**")
-        cols=st.columns(3)
-        for i,person in enumerate(SHABAB):
-            total_p=pd.to_numeric(month_df[month_df["الاسم"]==person]["المبلغ"],errors='coerce').sum()
-            cols[i%3].metric(person,f"{total_p:.3f}")
+    else: st.info("لا توجد مصاريف.")
+    if not mdf.empty:
+        st.divider(); st.markdown("**📊 إجماليات:**"); cols=st.columns(3)
+        for i,p in enumerate(SHABAB):
+            tp=pd.to_numeric(mdf[mdf["الاسم"]==p]["المبلغ"],errors='coerce').sum()
+            cols[i%3].metric(p,f"{tp:.3f}")
 
-# ══════════════════════════════════════════════
-#  ٤: خدمات الشقة
-# ══════════════════════════════════════════════
+# ── ٤ خدمات الشقة ────────────────────────────
 with tab4:
     st.subheader("🏠 خدمات الشقة")
-    svc_tab1,svc_tab2,svc_tab3 = st.tabs(["🧹 تنظيف الشقة","🔵 ملء الأنبوبة","🚫 إدارة الإعفاءات"])
+    sv1,sv2,sv3=st.tabs(["🧹 التنظيف","🔵 الأنبوبة","🚫 الإعفاءات"])
 
-    # ────────── التنظيف ──────────
-    with svc_tab1:
+    # ────── التنظيف ──────
+    with sv1:
         st.markdown("""<div class="info-box">
-🧹 <b>نظام دور التنظيف:</b> كل جمعة شخصان ينظفان معاً.<br>
-• 🔵 الأول عليه <b>أسبوعه الثاني</b>  |  🟢 الثاني عليه <b>أسبوعه الأول</b>.<br>
-• الترتيب: أ(ثانيه)+ب(أوله) ← ب(ثانيه)+ج(أوله) ← ج(ثانيه)+د(أوله) ...<br>
-• من في <b>إجازة كاملة أو معفى</b> يُستثنى تلقائياً.
-</div>""", unsafe_allow_html=True)
+🧹 <b>نظام الدوران:</b> كل جمعة شخصان — 🔵 أسبوعه الثاني + 🟢 أسبوعه الأول.<br>
+الترتيب: أ(ثانيه)+ب(أوله) ← ب(ثانيه)+ج(أوله) ← ... ← تعود من الأول.<br>
+من في إجازة أو معفى يُتخطى ويحل مكانه التالي المتاح تلقائياً.<br>
+<b>العودة من الإجازة:</b> سجّلها في تبويب الإجازات أو استخدم خانة العودة أدناه — سيدخل الجدول من الجمعة التي تليها.
+</div>""",unsafe_allow_html=True)
 
         if not SHABAB:
             st.info("أضف أشخاصاً أولاً.")
         else:
-            # حالة الأشخاص
+            # ── حالة الأشخاص ──
             st.markdown("#### 👥 حالة الأشخاص")
-            pc = st.columns(min(len(SHABAB),4))
-            for i,person in enumerate(SHABAB):
-                vac=month_vacations.get(person,{})
-                is_vac=vac.get("type")=="full"
-                is_ex=person in cleaning_exempt
-                is_act=person in active_for_cleaning
-                badge=('<span class="exempt-badge">🏖️ إجازة</span>' if is_vac else
-                       '<span class="exempt-badge">🚫 معفى</span>' if is_ex else
-                       '<span class="next-badge">✅ متاح</span>')
+            pc=st.columns(min(len(SHABAB),4))
+            for i,p in enumerate(SHABAB):
+                st2=p_status(p,vac_month,cl_ex)
+                badge=('<span style="background:#1a2e3b;color:#60a5fa;border-radius:20px;padding:3px 10px;font-size:.8rem;">🏖️ إجازة</span>' if st2=="vacation" else
+                       '<span style="background:#2a1a0d;color:#fbbf24;border-radius:20px;padding:3px 10px;font-size:.8rem;">🚫 معفى</span>'  if st2=="exempt" else
+                       '<span style="background:#0d3b2e;color:#4ade80;border-radius:20px;padding:3px 10px;font-size:.8rem;">✅ متاح</span>')
+                bc="#4ade80" if st2=="active" else "#2a2f45"
                 with pc[i%len(pc)]:
-                    st.markdown(f"""<div style="background:#1a1e2e;border:1px solid {'#4ade80' if is_act else '#3b0d1a'};
-border-radius:10px;padding:10px;text-align:center;margin-bottom:8px;">
-<div style="color:{'#4ade80' if is_act else '#8892b0'};font-weight:700;font-size:.9rem;">{person}</div>
-<div style="margin-top:4px;">{badge}</div></div>""",unsafe_allow_html=True)
+                    st.markdown(
+                        '<div style="background:#1a1e2e;border:1px solid '+bc+';border-radius:10px;'
+                        'padding:10px;text-align:center;margin-bottom:8px;">'
+                        '<div style="color:'+("#4ade80" if st2=="active" else "#8892b0")+';font-weight:700;font-size:.9rem;">'+p+'</div>'
+                        '<div style="margin-top:4px;">'+badge+'</div></div>',unsafe_allow_html=True)
 
             st.divider()
 
             # ── جدول الدوران التفاعلي ──
-            # عدد الأسابيع = عدد الأشخاص (دورة كاملة)
-            n_weeks = max(len(SHABAB), 2)
-            rotation = build_rotation_table(
-                SHABAB, month_vacations, cleaning_exempt, cleaning_log,
-                weeks_ahead=n_weeks
-            )
-
-            today = date.today()
-            days_to_fri = (4 - today.weekday()) % 7
-            if days_to_fri == 0: days_to_fri = 7
-            next_friday = today + timedelta(days=days_to_fri)
-
             st.markdown("### 🗓️ جدول الدوران – الجمع القادمة")
-            st.caption("🔵 أسبوعه الثاني  |  🟢 أسبوعه الأول  |  اختر الأسماء من القوائم ثم احفظ")
+            st.caption("🔵 = أسبوعه الثاني  |  🟢 = أسبوعه الأول  |  اختر من القوائم ثم اضغط حفظ")
 
-            # بناء الجدول: كل صف = جمعة + قائمتان منسدلتان
-            # نحتاج أولاً نعرف كل الاختيارات قبل رسم الصفوف
-            # نستخدم session_state لحفظ الاختيارات عبر reruns
-            if "cl_selections" not in st.session_state:
-                st.session_state.cl_selections = {}
+            # حفظ اختيارات القوائم في session_state مرتبطة بـ nextPair الأخير
+            # مفتاح الجلسة يتضمن nextPair حتى يتجدد بعد كل حفظ
+            last_np = cl_log[0].get("nextPair","") if cl_log else ""
+            ss_key  = "cl_sel_" + last_np.replace(" ","")
 
-            # مزامنة الاختيارات مع الجدول المقترح
-            for i, r in enumerate(rotation):
-                key_s = "cl_sec_" + str(i)
-                key_f = "cl_fir_" + str(i)
-                sug_s = r["p_second"]
-                sug_f = r["p_first"]
-                # فقط إذا لم يكن المستخدم غيّر الاختيار يدوياً
-                if key_s not in st.session_state.cl_selections:
-                    st.session_state.cl_selections[key_s] = sug_s if sug_s in SHABAB else (SHABAB[0] if SHABAB else "")
-                if key_f not in st.session_state.cl_selections:
-                    st.session_state.cl_selections[key_f] = sug_f if sug_f in SHABAB else (SHABAB[1] if len(SHABAB)>1 else "")
+            if ss_key not in st.session_state:
+                # ابنِ الاختيارات الافتراضية من الجدول
+                st.session_state[ss_key] = {
+                    str(i)+"_s": r["p_sec"] for i,r in enumerate(rotation)
+                }
+                st.session_state[ss_key].update({
+                    str(i)+"_f": r["p_fir"] for i,r in enumerate(rotation)
+                })
 
-            for i, r in enumerate(rotation):
-                is_cur   = r["is_current"]
-                skipped  = r["sec_skipped"] + r["fir_skipped"]
-                fri_str  = r["fri_str"]
-                cur_tag  = "  ← 🧹 هذه الجمعة" if is_cur else ""
-                bg_color = "#0a1f14" if is_cur else "#141824"
-                border_s = "2px solid #4ade80" if is_cur else "1px solid #2a2f45"
-                fri_clr  = "#4ade80" if is_cur else "#8892b0"
+            sel_store = st.session_state[ss_key]
 
-                # رأس الصف
+            # ── رسم الصفوف ──
+            saved_sec=None; saved_fir=None; saved_nxt_sec=None; saved_nxt_fir=None
+            save_fri=None
+
+            for i,r in enumerate(rotation):
+                is_cur  = r["is_cur"]
+                fri_str = r["fri_str"]
+                skipped = r["skipped"]
+                bg   = "#0a1f14" if is_cur else "#141824"
+                bord = "2px solid #4ade80" if is_cur else "1px solid #2a2f45"
+                fcol = "#4ade80" if is_cur else "#8892b0"
+                ctag = "  ← 🧹 هذه الجمعة" if is_cur else ""
+
                 st.markdown(
-                    '<div style="background:' + bg_color + ';border:' + border_s +
-                    ';border-radius:14px;padding:14px 18px;margin-bottom:10px;direction:rtl;">'
-                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
-                    '<span style="color:' + fri_clr + ';font-weight:700;font-size:.95rem;">📅 الجمعة ' + fri_str + cur_tag + '</span>'
-                    '</div>',
-                    unsafe_allow_html=True
-                )
+                    '<div style="background:'+bg+';border:'+bord+';border-radius:14px;'
+                    'padding:12px 16px;margin-bottom:6px;">'
+                    '<div style="color:'+fcol+';font-weight:700;font-size:.9rem;margin-bottom:8px;">'
+                    '📅 الجمعة '+fri_str+ctag+'</div>',
+                    unsafe_allow_html=True)
 
-                # القائمتان المنسدلتان داخل عمودين
-                col_s, col_f, col_btn = st.columns([2, 2, 1])
+                cs,cf2=st.columns([2,2])
+                sk_s = str(i)+"_s"; sk_f = str(i)+"_f"
+                cur_s = sel_store.get(sk_s, r["p_sec"])
+                cur_f = sel_store.get(sk_f, r["p_fir"])
 
-                key_s = "cl_sec_" + str(i)
-                key_f = "cl_fir_" + str(i)
+                with cs:
+                    idx_s = SHABAB.index(cur_s) if cur_s in SHABAB else 0
+                    sel_s = st.selectbox("🔵 أسبوعه الثاني", SHABAB,
+                                         index=idx_s, key="s_s_"+str(i))
+                    sel_store[sk_s] = sel_s
 
-                with col_s:
-                    cur_s = st.session_state.cl_selections.get(key_s, SHABAB[0] if SHABAB else "")
-                    s_idx = SHABAB.index(cur_s) if cur_s in SHABAB else 0
-                    sel_s = st.selectbox(
-                        "🔵 أسبوعه الثاني",
-                        options=SHABAB,
-                        index=s_idx,
-                        key="sel_s_" + str(i),
-                        label_visibility="visible"
-                    )
-                    st.session_state.cl_selections[key_s] = sel_s
+                with cf2:
+                    fopts = [p for p in SHABAB if p!=sel_s] or SHABAB
+                    cur_f2 = cur_f if cur_f in fopts else fopts[0]
+                    idx_f = fopts.index(cur_f2)
+                    sel_f = st.selectbox("🟢 أسبوعه الأول", fopts,
+                                         index=idx_f, key="s_f_"+str(i))
+                    sel_store[sk_f] = sel_f
 
-                with col_f:
-                    cur_f = st.session_state.cl_selections.get(key_f, SHABAB[1] if len(SHABAB)>1 else "")
-                    # استثناء من اختير للثاني
-                    fir_opts = [p for p in SHABAB if p != sel_s]
-                    if not fir_opts: fir_opts = SHABAB
-                    f_idx = fir_opts.index(cur_f) if cur_f in fir_opts else 0
-                    sel_f = st.selectbox(
-                        "🟢 أسبوعه الأول",
-                        options=fir_opts,
-                        index=f_idx,
-                        key="sel_f_" + str(i),
-                        label_visibility="visible"
-                    )
-                    st.session_state.cl_selections[key_f] = sel_f
-
-                with col_btn:
-                    st.markdown("<br>", unsafe_allow_html=True)
-                    if is_cur:
-                        if st.button("💾 حفظ", key="save_cl_" + str(i), type="primary", use_container_width=True):
-                            if sel_s == sel_f:
-                                st.warning("⚠️ يجب أن يكون الشخصان مختلفَين.")
-                            else:
-                                # الدور القادم = الصف التالي في الجدول
-                                if i + 1 < len(rotation):
-                                    next_s_key = "cl_sec_" + str(i+1)
-                                    next_f_key = "cl_fir_" + str(i+1)
-                                    next_sec = st.session_state.cl_selections.get(next_s_key, rotation[i+1]["p_second"])
-                                    next_fir = st.session_state.cl_selections.get(next_f_key, rotation[i+1]["p_first"])
-                                else:
-                                    next_sec = rotation[0]["p_second"]
-                                    next_fir = rotation[0]["p_first"]
-                                cleaner_str = sel_s + "، " + sel_f
-                                next_str    = next_sec + "، " + next_fir
-                                with st.spinner("حفظ…"):
-                                    res = call_script({
-                                        "action":   "addCleaningEntry",
-                                        "cleaner":  cleaner_str,
-                                        "weekFrom": str(next_friday),
-                                        "weekTo":   str(next_friday),
-                                        "weekNum":  "1",
-                                        "nextPair": next_str,
-                                        "note":     "",
-                                    })
-                                if "Success" in res:
-                                    wa_cleaning(sel_s, sel_f,
-                                                next_friday.strftime("%d/%m/%Y"),
-                                                next_sec, next_fir, "")
-                                    st.success("✅ تم! القادم: 🔵" + next_sec + " + 🟢" + next_fir)
-                                    st.session_state.pop("cleaning_log", None)
-                                    st.session_state.pop("cl_selections", None)
-                                    clear_all_cache()
-                                    st.rerun()
-                                else:
-                                    st.error("خطأ: " + res)
-
-                # تذييل الصف: من تم تخطيه
                 if skipped:
-                    st.markdown(
-                        '<div style="color:#6b7280;font-size:.75rem;padding:0 4px 8px;">⏭️ تخطي: ' + "، ".join(skipped) + '</div>',
-                        unsafe_allow_html=True
-                    )
-                st.markdown('</div>', unsafe_allow_html=True)
+                    st.markdown('<div style="color:#6b7280;font-size:.72rem;">⏭️ تخطي: '+"، ".join(skipped)+'</div>',unsafe_allow_html=True)
 
-            # سجل التنظيف
-            st.markdown("### 📋 سجل التنظيف")
-            if cleaning_log:
-                for entry in cleaning_log[:15]:
-                    np_ = entry.get("nextPair","")
-                    note_t = f' | {entry.get("note","")}' if entry.get("note") else ""
-                    np_badge = f' | <span style="color:#93c5fd;">القادم: <b>{np_}</b></span>' if np_ else ""
-                    st.markdown(f"""<div style="background:#1a1e2e;border:1px solid #2a2f45;
-border-radius:10px;padding:11px 16px;margin-bottom:7px;direction:rtl;">
-<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-  <span style="color:#4ade80;font-weight:700;">🧹 {entry.get("cleaner","")}</span>
-  <span style="color:#8892b0;font-size:.82rem;">📅 {entry.get("weekFrom","")}{note_t}{np_badge}</span>
-</div></div>""",unsafe_allow_html=True)
-            else:
-                st.info("لا يوجد سجل تنظيف بعد.")
+                st.markdown('</div>',unsafe_allow_html=True)
 
-    # ────────── الأنبوبة ──────────
-    with svc_tab2:
-        st.markdown("""<div class="info-box">
-🔵 <b>نظام ملء الأنبوبة:</b> الدور يدور على المتاحين بالتسلسل.<br>
-• من في <b>إجازة كاملة أو معفى</b> يُستثنى تلقائياً.
-</div>""",unsafe_allow_html=True)
+                # اجمع بيانات الحفظ من أول صفين
+                if i==0: saved_sec=sel_s; saved_fir=sel_f; save_fri=r["fri"]
+                if i==1: saved_nxt_sec=sel_s; saved_nxt_fir=sel_f
 
-        if not SHABAB:
-            st.info("أضف أشخاصاً أولاً.")
-        else:
-            # بطاقة الدور
-            st.markdown(f"""<div style="background:linear-gradient(135deg,#0d1f3c,#1a2e4a);
-border:2px solid #60a5fa;border-radius:16px;padding:18px;text-align:center;margin-bottom:20px;">
-<div style="color:#93c5fd;font-size:.85rem;">🔵 دور ملء الأنبوبة القادم</div>
-<div style="color:#60a5fa;font-size:1.8rem;font-weight:800;margin:6px 0;">{next_gas_person or "—"}</div>
-</div>""",unsafe_allow_html=True)
-
-            # شبكة الأشخاص
-            st.markdown("##### 🔄 ترتيب الدور")
-            gcols = st.columns(min(len(SHABAB),5))
-            for i,person in enumerate(SHABAB):
-                is_next=person==next_gas_person
-                vac=month_vacations.get(person,{})
-                is_vac=vac.get("type")=="full"
-                is_ex=person in gas_exempt
-                fills=sum(1 for e in gas_log if e.get("filler")==person)
-                if is_vac:     slbl="🏖️ إجازة"; bcol="#3b2a0d"; ncol="#8892b0"
-                elif is_ex:    slbl="🚫 معفى";  bcol="#3b0d0d"; ncol="#8892b0"
-                elif is_next:  slbl="🔵 دوره";  bcol="#60a5fa"; ncol="#60a5fa"
-                else:          slbl=f"⏳ {fills}×";bcol="#2a2f45";ncol="#8892b0"
-                with gcols[i%len(gcols)]:
-                    st.markdown(f"""<div style="background:#1a1e2e;border:1px solid {bcol};
-border-radius:10px;padding:10px;text-align:center;margin-bottom:8px;">
-<div style="color:{ncol};font-weight:700;font-size:.85rem;">{person}</div>
-<div style="color:#6b7280;font-size:.75rem;margin-top:4px;">{slbl}</div>
-</div>""",unsafe_allow_html=True)
-
-            # نموذج التسجيل بـ radio بدلاً من checkbox
-            st.markdown("### ✅ تسجيل ملء الأنبوبة")
-
-            st.markdown("**👤 من ملأ الأنبوبة؟**")
-            gas_filler_choice = st.radio(
-                "من ملأ",
-                options=active_for_gas if active_for_gas else SHABAB,
-                index=active_for_gas.index(next_gas_person) if next_gas_person and next_gas_person in active_for_gas else 0,
-                horizontal=True,
-                key="gas_filler_radio",
-                label_visibility="collapsed"
-            )
-
-            st.markdown("**🔜 من عليه الدور القادم؟**")
-            next_gas_opts = [p for p in active_for_gas if p != gas_filler_choice]
-            if not next_gas_opts:
-                next_gas_opts = active_for_gas
-            # اقتراح التالي بعد من ملأ
-            if gas_filler_choice in active_for_gas:
-                sug_ng_idx = (active_for_gas.index(gas_filler_choice)+1) % len(active_for_gas)
-                sug_ng = active_for_gas[sug_ng_idx]
-            else:
-                sug_ng = next_gas_opts[0] if next_gas_opts else ""
-            ng_idx = next_gas_opts.index(sug_ng) if sug_ng in next_gas_opts else 0
-            next_gas_choice = st.radio(
-                "الدور القادم",
-                options=next_gas_opts,
-                index=ng_idx,
-                horizontal=True,
-                key="next_gas_radio",
-                label_visibility="collapsed"
-            )
-
-            if st.button("💾 حفظ", type="primary", use_container_width=True, key="save_gas_btn"):
-                with st.spinner("جاري الحفظ…"):
-                    res = call_script({"action":"addGasEntry",
-                                       "filler":gas_filler_choice,
-                                       "nextPerson":next_gas_choice})
-                if "Success" in res:
-                    wa_gas(gas_filler_choice, next_gas_choice)
-                    st.success(f"✅ تم تسجيل {gas_filler_choice}! الدور القادم: {next_gas_choice}")
-                    st.session_state.pop("gas_log",None)
-                    clear_all_cache(); st.rerun()
+            # ── زر الحفظ أسفل الجدول ──
+            st.markdown("---")
+            cl_note=st.text_input("ملاحظة (اختياري)",placeholder="مثال: تنظيف عميق",key="cl_note")
+            if st.button("💾 حفظ دور هذه الجمعة",type="primary",use_container_width=True,key="save_cl"):
+                if not saved_sec or not saved_fir:
+                    st.warning("⚠️ لا يوجد بيانات للحفظ.")
+                elif saved_sec==saved_fir:
+                    st.warning("⚠️ يجب أن يكون الشخصان مختلفَين.")
                 else:
-                    st.error(f"خطأ: {res}")
+                    if not saved_nxt_sec: saved_nxt_sec=saved_sec
+                    if not saved_nxt_fir: saved_nxt_fir=saved_fir
+                    cleaner_str=saved_sec+"، "+saved_fir
+                    next_str   =saved_nxt_sec+"، "+saved_nxt_fir
+                    fri_save   =save_fri.strftime("%d/%m/%Y") if save_fri else next_friday().strftime("%d/%m/%Y")
+                    with st.spinner("حفظ…"):
+                        res=api({"action":"addCleaningEntry","cleaner":cleaner_str,
+                                 "weekFrom":str(save_fri),"weekTo":str(save_fri),
+                                 "weekNum":"1","nextPair":next_str,"note":cl_note})
+                    if "Success" in res:
+                        wa_cleaning(saved_sec,saved_fir,fri_save,saved_nxt_sec,saved_nxt_fir)
+                        st.success("✅ تم! القادم: 🔵"+saved_nxt_sec+" + 🟢"+saved_nxt_fir)
+                        # امسح اختيارات الجلسة حتى يتجدد من الـ Sheet
+                        for k in list(st.session_state.keys()):
+                            if k.startswith("cl_sel_"): del st.session_state[k]
+                        clr(); st.rerun()
+                    else: st.error("خطأ: "+res)
 
-            # سجل الأنبوبة
+            # ── العودة من الإجازة ──
+            st.markdown("---")
+            with st.expander("🏠 تسجيل عودة شخص من الإجازة"):
+                st.markdown("""<div class="info-box">
+عند عودة شخص من الإجازة، سجّلها هنا أو من تبويب الإجازات (غيّر النوع إلى "لا توجد إجازة").
+بعد الحفظ، سيظهر الشخص تلقائياً في الجمعة المناسبة في الجدول.
+</div>""",unsafe_allow_html=True)
+                # الأشخاص في إجازة حالياً
+                in_vac=[p for p in SHABAB if vac_month.get(p,{}).get("type")=="full"]
+                if in_vac:
+                    ret_p=st.selectbox("من عاد؟",in_vac,key="ret_person")
+                    if st.button("✅ تسجيل العودة",key="btn_return"):
+                        with st.spinner("حفظ…"):
+                            res=api({"action":"saveVacation","month":sel_month_ar,
+                                     "name":ret_p,"vtype":"none","days":"","vacDate":"","deductAmt":""})
+                        if "Success" in res:
+                            # الجمعة التي تلي القادمة
+                            ret_fri=(next_friday()+timedelta(weeks=1)).strftime("%d/%m/%Y")
+                            wa_return_vac(ret_p,ret_fri)
+                            st.success("✅ تم! "+ret_p+" سيظهر في الجدول من الجمعة "+ret_fri)
+                            clr(); st.rerun()
+                        else: st.error(res)
+                else:
+                    st.info("لا يوجد أشخاص في إجازة كاملة حالياً.")
+
+            # ── سجل التنظيف ──
+            st.markdown("### 📋 سجل التنظيف")
+            if cl_log:
+                for entry in cl_log[:15]:
+                    np2=entry.get("nextPair",""); nt2=f' | {entry.get("note","")}' if entry.get("note") else ""
+                    nb=' | <span style="color:#93c5fd;">القادم: <b>'+np2+'</b></span>' if np2 else ""
+                    st.markdown(
+                        '<div style="background:#1a1e2e;border:1px solid #2a2f45;border-radius:10px;'
+                        'padding:11px 16px;margin-bottom:7px;direction:rtl;">'
+                        '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">'
+                        '<span style="color:#4ade80;font-weight:700;">🧹 '+entry.get("cleaner","")+'</span>'
+                        '<span style="color:#8892b0;font-size:.82rem;">📅 '+entry.get("weekFrom","")+nt2+nb+'</span>'
+                        '</div></div>',unsafe_allow_html=True)
+            else: st.info("لا يوجد سجل.")
+
+    # ────── الأنبوبة ──────
+    with sv2:
+        st.markdown("""<div class="info-box">🔵 <b>نظام الأنبوبة:</b> الدور يدور على المتاحين.
+من في إجازة أو معفى يُستثنى تلقائياً.</div>""",unsafe_allow_html=True)
+        if not SHABAB: st.info("أضف أشخاصاً أولاً.")
+        else:
+            st.markdown(
+                '<div style="background:linear-gradient(135deg,#0d1f3c,#1a2e4a);border:2px solid #60a5fa;'
+                'border-radius:16px;padding:18px;text-align:center;margin-bottom:20px;">'
+                '<div style="color:#93c5fd;font-size:.85rem;">🔵 دور ملء الأنبوبة القادم</div>'
+                '<div style="color:#60a5fa;font-size:1.8rem;font-weight:800;margin:6px 0;">'+(nxt_gas or "—")+'</div>'
+                '</div>',unsafe_allow_html=True)
+
+            gas_active=[p for p in SHABAB if vac_month.get(p,{}).get("type")!="full" and p not in gas_ex]
+            gcols=st.columns(min(len(SHABAB),5))
+            for i,p in enumerate(SHABAB):
+                is_n=p==nxt_gas; is_v=vac_month.get(p,{}).get("type")=="full"; is_ex=p in gas_ex
+                fills=sum(1 for e in gas_log if e.get("filler")==p)
+                if is_v:   sl="🏖️ إجازة"; bc="#3b2a0d"; nc="#8892b0"
+                elif is_ex: sl="🚫 معفى";  bc="#3b0d0d"; nc="#8892b0"
+                elif is_n:  sl="🔵 دوره";  bc="#60a5fa"; nc="#60a5fa"
+                else:       sl=f"⏳ {fills}×"; bc="#2a2f45"; nc="#8892b0"
+                with gcols[i%len(gcols)]:
+                    st.markdown(
+                        '<div style="background:#1a1e2e;border:1px solid '+bc+';border-radius:10px;'
+                        'padding:10px;text-align:center;margin-bottom:8px;">'
+                        '<div style="color:'+nc+';font-weight:700;font-size:.85rem;">'+p+'</div>'
+                        '<div style="color:#6b7280;font-size:.75rem;margin-top:4px;">'+sl+'</div></div>',unsafe_allow_html=True)
+
+            st.markdown("### ✅ تسجيل ملء الأنبوبة")
+            g_opts=gas_active or SHABAB
+            gi=g_opts.index(nxt_gas) if nxt_gas in g_opts else 0
+            gfiller=st.radio("👤 من ملأ؟",g_opts,index=gi,horizontal=True,key="g_fill",label_visibility="visible")
+            ng_opts=[p for p in g_opts if p!=gfiller] or g_opts
+            sug_ng=g_opts[(g_opts.index(gfiller)+1)%len(g_opts)] if gfiller in g_opts else ng_opts[0]
+            ni=ng_opts.index(sug_ng) if sug_ng in ng_opts else 0
+            gnext=st.radio("🔜 الدور القادم؟",ng_opts,index=ni,horizontal=True,key="g_next",label_visibility="visible")
+            if st.button("💾 حفظ",type="primary",use_container_width=True,key="save_gas"):
+                res=api({"action":"addGasEntry","filler":gfiller,"nextPerson":gnext})
+                if "Success" in res:
+                    wa_gas(gfiller,gnext); st.success("✅ تم! القادم: "+gnext); clr(); st.rerun()
+                else: st.error("خطأ: "+res)
+
             st.markdown("### 📋 سجل الأنبوبة")
             if gas_log:
                 for entry in gas_log[:15]:
-                    st.markdown(f"""<div style="background:#1a1e2e;border:1px solid #2a2f45;
-border-radius:10px;padding:11px 16px;margin-bottom:7px;direction:rtl;">
-<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-  <span style="color:#60a5fa;font-weight:700;">🔵 {entry.get("filler","")}</span>
-  <span style="color:#8892b0;font-size:.82rem;">
-    📅 {str(entry.get("date",""))[:10]} | التالي: <b style="color:#93c5fd;">{entry.get("nextPerson","")}</b>
-  </span>
-</div></div>""",unsafe_allow_html=True)
-            else:
-                st.info("لا يوجد سجل أنبوبة بعد.")
+                    st.markdown(
+                        '<div style="background:#1a1e2e;border:1px solid #2a2f45;border-radius:10px;'
+                        'padding:11px 16px;margin-bottom:7px;direction:rtl;">'
+                        '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">'
+                        '<span style="color:#60a5fa;font-weight:700;">🔵 '+entry.get("filler","")+'</span>'
+                        '<span style="color:#8892b0;font-size:.82rem;">📅 '+str(entry.get("date",""))[:10]+
+                        ' | التالي: <b style="color:#93c5fd;">'+entry.get("nextPerson","")+'</b></span>'
+                        '</div></div>',unsafe_allow_html=True)
+            else: st.info("لا يوجد سجل.")
 
-    # ────────── إدارة الإعفاءات ──────────
-    with svc_tab3:
-        st.markdown("""<div class="info-box">
-🚫 <b>إدارة الإعفاءات الدائمة:</b><br>
-• من في <b>إجازة كاملة</b> يُعفى <b>تلقائياً</b> بدون الحاجة لإضافته هنا.<br>
-• هذا القسم للإعفاءات الدائمة: مريض، عمل خاص، إلخ.
-</div>""",unsafe_allow_html=True)
-        if not SHABAB:
-            st.info("أضف أشخاصاً أولاً.")
+    # ────── الإعفاءات ──────
+    with sv3:
+        st.markdown("""<div class="info-box">🚫 <b>الإعفاءات الدائمة:</b>
+من في إجازة كاملة يُعفى تلقائياً. هذا القسم للإعفاءات الدائمة (مريض، عمل، إلخ).</div>""",unsafe_allow_html=True)
+        if not SHABAB: st.info("أضف أشخاصاً أولاً.")
         else:
-            col_ex1,col_ex2 = st.columns(2)
-            for col_ex,svc,exempt_set,lbl in [
-                (col_ex1,"cleaning",cleaning_exempt,"🧹 إعفاءات التنظيف"),
-                (col_ex2,"gas",gas_exempt,"🔵 إعفاءات الأنبوبة")]:
-                with col_ex:
-                    st.markdown(f"### {lbl}")
-                    for person in SHABAB:
-                        vac=month_vacations.get(person,{})
-                        is_vac=vac.get("type")=="full"
-                        is_ex=person in exempt_set
+            xc1,xc2=st.columns(2)
+            for xcol,svc,exs,lbl in[(xc1,"cleaning",cl_ex,"🧹 إعفاءات التنظيف"),(xc2,"gas",gas_ex,"🔵 إعفاءات الأنبوبة")]:
+                with xcol:
+                    st.markdown("### "+lbl)
+                    for p in SHABAB:
+                        is_v=vac_month.get(p,{}).get("type")=="full"; is_ex=p in exs
                         r1,r2=st.columns([3,1])
                         with r1:
-                            if is_vac:   st.markdown(f"🏖️ **{person}** — إجازة")
-                            elif is_ex:  st.markdown(f"🚫 **{person}** — معفى")
-                            else:        st.markdown(f"✅ **{person}** — متاح")
+                            if is_v:   st.markdown("🏖️ **"+p+"** — إجازة")
+                            elif is_ex: st.markdown("🚫 **"+p+"** — معفى")
+                            else:       st.markdown("✅ **"+p+"** — متاح")
                         with r2:
-                            if not is_vac:
+                            if not is_v:
                                 if is_ex:
-                                    if st.button("إلغاء",key=f"unex_{svc}_{person}",use_container_width=True):
-                                        res=call_script({"action":"removeExemption","service":svc,"name":person})
-                                        if "Success" in res:
-                                            wa_exemption(person,svc,"remove")
-                                            clear_all_cache(); st.rerun()
+                                    if st.button("إلغاء",key="unex_"+svc+"_"+p,use_container_width=True):
+                                        res=api({"action":"removeExemption","service":svc,"name":p})
+                                        if "Success" in res: wa_exempt(p,svc,"remove"); clr(); st.rerun()
                                 else:
-                                    if st.button("إعفاء",key=f"ex_{svc}_{person}",use_container_width=True):
-                                        res=call_script({"action":"addExemption","service":svc,"name":person})
-                                        if "Success" in res:
-                                            wa_exemption(person,svc,"add")
-                                            clear_all_cache(); st.rerun()
+                                    if st.button("إعفاء",key="ex_"+svc+"_"+p,use_container_width=True):
+                                        res=api({"action":"addExemption","service":svc,"name":p})
+                                        if "Success" in res: wa_exempt(p,svc,"add"); clr(); st.rerun()
 
-# ══════════════════════════════════════════════
-#  ٥: الإجازات
-# ══════════════════════════════════════════════
+# ── ٥ الإجازات ────────────────────────────────
 with tab5:
-    if not SHABAB:
-        st.info("أضف أشخاصاً أولاً.")
+    if not SHABAB: st.info("أضف أشخاصاً أولاً.")
     else:
-        st.subheader(f"🏖️ إدارة الإجازات – {selected_month_ar}")
-        st.markdown("""<div class="info-box">
-💡 <b>الإجازة تؤثر على المصاريف المشتركة فقط.</b> الإيجار ثابت على الجميع.<br>
+        st.subheader(f"🏖️ إدارة الإجازات – {sel_month_ar}")
+        st.markdown("""<div class="info-box">💡 <b>الإجازة تؤثر على المصاريف فقط.</b> الإيجار ثابت.<br>
 • <b>إجازة كاملة</b>: بدون مصاريف + إعفاء تلقائي من التنظيف والأنبوبة.<br>
-• <b>غياب من أول الشهر</b>: يُحسب بنسبة أيام حضوره.<br>
-• <b>إجازة من تاريخ</b>: يُحسب مصاريف الأيام الحاضرة فقط.<br>
-• <b>خصم مبلغ ثابت</b>: يشارك كامل مع خصم مبلغ محدد.
+• <b>غياب من أول الشهر / من تاريخ / خصم مبلغ</b>: يشارك في الإيجار.
 </div>""",unsafe_allow_html=True)
-        for person in SHABAB:
-            with st.expander(f"⚙️ {person}",expanded=False):
-                vac=month_vacations.get(person,{})
-                vtype=st.radio("نوع الإجازة",
+        for p in SHABAB:
+            with st.expander("⚙️ "+p,expanded=False):
+                v=vac_month.get(p,{})
+                vt=st.radio("نوع الإجازة",
                     options=["none","full","from_start","from_date","deduct"],
                     format_func=lambda x:{"none":"✅ لا توجد إجازة","full":"🏖️ إجازة كاملة",
                         "from_start":"🗓️ غياب من أول الشهر","from_date":"📅 إجازة من تاريخ",
                         "deduct":"➖ خصم مبلغ ثابت"}[x],
-                    index=["none","full","from_start","from_date","deduct"].index(vac.get("type","none")),
-                    key=f"vtype_{person}")
-                extra={}
-                if vtype=="from_start":
-                    absent=st.number_input("أيام الغياب",min_value=1,max_value=days_in_month,step=1,
-                                           value=int(vac.get("days",1)),key=f"days_{person}")
-                    present=days_in_month-absent
-                    st.info(f"مصاريف: {present}/{days_in_month} يوم ({present/days_in_month*100:.1f}%) | إيجار: {rent_per_person:.3f}")
-                    extra["days"]=absent
-                elif vtype=="from_date":
-                    vd=vac.get("date") or date(sel_year,sel_month,15)
-                    vac_date=st.date_input("تاريخ بداية الإجازة",value=vd,
-                        min_value=date(sel_year,sel_month,1),
-                        max_value=date(sel_year,sel_month,days_in_month),key=f"vdate_{person}")
-                    present=max(0,min((vac_date-date(sel_year,sel_month,1)).days,days_in_month))
-                    st.info(f"مصاريف: {present}/{days_in_month} يوم ({present/days_in_month*100:.1f}%) | إيجار: {rent_per_person:.3f}")
-                    extra["date"]=vac_date
-                elif vtype=="deduct":
-                    ded=st.number_input("المبلغ المخصوم",min_value=0.0,step=0.5,format="%.3f",
-                                        value=float(vac.get("deduct_amount",0.0)),key=f"ded_{person}")
-                    st.info(f"خصم {ded:.3f} من المصاريف | إيجار: {rent_per_person:.3f}")
-                    extra["deduct_amount"]=ded
-                elif vtype=="full":
-                    st.info(f"لا مصاريف | إيجار: {rent_per_person:.3f} | معفى من الخدمات ✅")
-                if st.button(f"💾 حفظ {person}",key=f"save_{person}"):
-                    if selected_month_ar not in st.session_state.vacations:
-                        st.session_state.vacations[selected_month_ar]={}
-                    if vtype=="none":
-                        st.session_state.vacations[selected_month_ar].pop(person,None)
-                    else:
-                        st.session_state.vacations[selected_month_ar][person]={"type":vtype,**extra}
+                    index=["none","full","from_start","from_date","deduct"].index(v.get("type","none")),
+                    key="vt_"+p)
+                ex={}
+                if vt=="from_start":
+                    ab=st.number_input("أيام الغياب",1,dim,int(v.get("days",1)),key="vd_"+p)
+                    pr=dim-ab; st.info(f"مصاريف: {pr}/{dim} يوم ({pr/dim*100:.1f}%)")
+                    ex["days"]=ab
+                elif vt=="from_date":
+                    vd=v.get("date") or date(sel_y,sel_m,15)
+                    vdt=st.date_input("تاريخ البداية",vd,date(sel_y,sel_m,1),date(sel_y,sel_m,dim),key="vdt_"+p)
+                    pr=max(0,min((vdt-date(sel_y,sel_m,1)).days,dim)); st.info(f"مصاريف: {pr}/{dim} يوم")
+                    ex["date"]=vdt
+                elif vt=="deduct":
+                    ded=st.number_input("المبلغ المخصوم",0.0,step=0.5,format="%.3f",value=float(v.get("deduct_amount",0.0)),key="vded_"+p)
+                    st.info(f"خصم {ded:.3f}"); ex["deduct_amount"]=ded
+                elif vt=="full": st.info("لا مصاريف | معفى من الخدمات ✅")
+                if st.button("💾 حفظ "+p,key="sv_"+p):
                     with st.spinner("حفظ…"):
-                        res=call_script({"action":"saveVacation","month":selected_month_ar,
-                            "name":person,"vtype":vtype,"days":extra.get("days",""),
-                            "vacDate":str(extra.get("date","")),
-                            "deductAmt":extra.get("deduct_amount","")})
+                        res=api({"action":"saveVacation","month":sel_month_ar,"name":p,"vtype":vt,
+                                 "days":ex.get("days",""),"vacDate":str(ex.get("date","")),"deductAmt":ex.get("deduct_amount","")})
                     if "Success" in res:
-                        wa_vacation(person,vtype,selected_month_ar)
-                        st.success(f"✅ تم حفظ إجازة {person}")
-                        st.cache_data.clear(); st.rerun()
-                    else:
-                        st.error(res)
-        if month_vacations:
-            st.divider()
-            st.markdown("**📋 الإجازات المسجلة:**")
-            for person,vac in month_vacations.items():
-                vtype=vac.get("type","")
-                desc={"full":"إجازة كاملة (+ إعفاء خدمات)","from_start":f"غياب {vac.get('days',0)} يوم",
-                      "from_date":f"إجازة من {vac.get('date','')}",
-                      "deduct":f"خصم {vac.get('deduct_amount',0):.3f}"}.get(vtype,"")
-                st.markdown(f'<div class="vacation-notice">🏖️ <strong>{person}</strong>: {desc} | إيجار ثابت: {rent_per_person:.3f}</div>',unsafe_allow_html=True)
+                        wa_vac(p,vt,sel_month_ar); st.success("✅"); clr(); st.rerun()
+                    else: st.error(res)
+        if vac_month:
+            st.divider(); st.markdown("**📋 الإجازات المسجلة:**")
+            for p,v in vac_month.items():
+                vt=v.get("type","")
+                desc={"full":"إجازة كاملة (+ إعفاء خدمات)","from_start":f"غياب {v.get('days',0)} يوم",
+                      "from_date":f"إجازة من {v.get('date','')}","deduct":f"خصم {v.get('deduct_amount',0):.3f}"}.get(vt,"")
+                st.markdown(f'<div class="vacation-notice">🏖️ <strong>{p}</strong>: {desc}</div>',unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════
-#  ٦: إدارة الأشخاص
-# ══════════════════════════════════════════════
+# ── ٦ إدارة الأشخاص ──────────────────────────
 with tab6:
-    st.subheader("⚙️ إدارة قائمة الأشخاص")
-    st.markdown('<div class="info-box">💡 إضافة أو حذف شخص يؤثر على توزيع الإيجار فوراً.</div>',unsafe_allow_html=True)
+    st.subheader("⚙️ إدارة الأشخاص")
+    st.markdown('<div class="info-box">💡 إضافة أو حذف شخص يؤثر على الإيجار فوراً.</div>',unsafe_allow_html=True)
     if SHABAB:
         st.markdown("### 👥 الأشخاص الحاليون")
-        for person in SHABAB:
-            pc1,pc2,pc3=st.columns([3,1,1])
-            pc1.markdown(f"🔹 **{person}**")
-            if pc2.button("✏️ تعديل",key=f"editbtn_{person}"):
-                st.session_state[f"editing_{person}"]=True
-            if st.session_state.get(f"editing_{person}",False):
-                with st.form(key=f"rename_form_{person}"):
-                    new_name=st.text_input("الاسم الجديد",value=person)
-                    sc1,sc2=st.columns(2)
-                    save_r=sc1.form_submit_button("💾 حفظ")
-                    cancel_r=sc2.form_submit_button("❌ إلغاء")
-                    if save_r:
-                        if new_name.strip() and new_name.strip()!=person:
-                            with st.spinner("تعديل…"):
-                                res=call_script({"action":"renamePerson","oldName":person,"newName":new_name.strip()})
+        for p in SHABAB:
+            pc1,pc2,pc3=st.columns([3,1,1]); pc1.markdown("🔹 **"+p+"**")
+            if pc2.button("✏️ تعديل",key="eb_"+p): st.session_state["ed_"+p]=True
+            if st.session_state.get("ed_"+p,False):
+                with st.form("rf_"+p):
+                    nn=st.text_input("الاسم الجديد",value=p)
+                    s1,s2=st.columns(2); sv=s1.form_submit_button("💾 حفظ"); cn=s2.form_submit_button("❌ إلغاء")
+                    if sv:
+                        if nn.strip() and nn.strip()!=p:
+                            res=api({"action":"renamePerson","oldName":p,"newName":nn.strip()})
                             if "Success" in res:
-                                wa_person_rename(person,new_name.strip())
-                                st.success(f"✅ تم التغيير إلى {new_name}")
-                                st.session_state.pop(f"editing_{person}",None)
-                                clear_all_cache(); st.rerun()
+                                wa_rename(p,nn.strip()); st.success("✅")
+                                st.session_state.pop("ed_"+p,None); clr(); st.rerun()
                             else: st.error(res)
                         else: st.warning("⚠️ أدخل اسماً مختلفاً.")
-                    if cancel_r:
-                        st.session_state.pop(f"editing_{person}",None); st.rerun()
-            if pc3.button("🗑️ حذف",key=f"delperson_{person}"):
-                with st.spinner(f"حذف {person}…"):
-                    res=call_script({"action":"deletePerson","name":person})
-                if "Success" in res:
-                    wa_person_delete(person)
-                    st.success(f"✅ تم حذف {person}")
-                    clear_all_cache(); st.rerun()
+                    if cn: st.session_state.pop("ed_"+p,None); st.rerun()
+            if pc3.button("🗑️ حذف",key="dp_"+p):
+                res=api({"action":"deletePerson","name":p})
+                if "Success" in res: wa_del_person(p); st.success("✅"); clr(); st.rerun()
                 else: st.error(res)
-    else:
-        st.info("لا يوجد أشخاص بعد. أضف أول شخص من الأسفل.")
-    st.divider()
-    st.markdown("### ➕ إضافة شخص جديد")
-    with st.form("add_person_form",clear_on_submit=True):
-        new_person=st.text_input("اسم الشخص",placeholder="مثال: أبو عمر")
+    else: st.info("لا يوجد أشخاص.")
+    st.divider(); st.markdown("### ➕ إضافة شخص جديد")
+    with st.form("add_p",clear_on_submit=True):
+        np2=st.text_input("اسم الشخص",placeholder="مثال: أبو عمر")
         if st.form_submit_button("➕ إضافة",use_container_width=True):
-            if new_person.strip():
-                if new_person.strip() in SHABAB:
-                    st.warning("⚠️ هذا الشخص موجود مسبقاً!")
+            if np2.strip():
+                if np2.strip() in SHABAB: st.warning("⚠️ موجود مسبقاً!")
                 else:
-                    with st.spinner("إضافة…"):
-                        res=call_script({"action":"addPerson","name":new_person.strip()})
-                    if "Success" in res:
-                        wa_person_add(new_person.strip())
-                        st.success(f"✅ تمت إضافة {new_person}")
-                        clear_all_cache(); st.rerun()
+                    res=api({"action":"addPerson","name":np2.strip()})
+                    if "Success" in res: wa_add_person(np2.strip()); st.success("✅"); clr(); st.rerun()
                     else: st.error(res)
-            else: st.warning("⚠️ أدخل اسماً صحيحاً.")
+            else: st.warning("⚠️ أدخل اسماً.")
 
-# ══════════════════════════════════════════════
-#  ٧: سجل الأحداث
-# ══════════════════════════════════════════════
+# ── ٧ سجل الأحداث ─────────────────────────────
 with tab7:
     st.subheader("📋 سجل الأحداث التاريخي")
-    cr1,cr2=st.columns([1,1])
-    with cr1:
-        filter_type=st.selectbox("فلتر النوع",["الكل","➕ إضافة مصروف","✏️ تعديل مصروف","🗑️ حذف مصروف",
-            "🏖️ تسجيل إجازة","🏖️ إلغاء إجازة","👤 إضافة شخص","🗑️ حذف شخص","✏️ تغيير اسم",
-            "⚙️ تغيير إعداد","⚙️ إعداد جديد"])
-    with cr2:
+    lr1,lr2=st.columns([1,1])
+    with lr1:
+        ft=st.selectbox("فلتر",["الكل","➕ إضافة مصروف","✏️ تعديل مصروف","🗑️ حذف مصروف",
+            "🏖️ تسجيل إجازة","🏖️ إلغاء إجازة","👤 إضافة شخص","🗑️ حذف شخص",
+            "✏️ تغيير اسم","⚙️ تغيير إعداد","⚙️ إعداد جديد"])
+    with lr2:
         if st.button("🔄 تحديث السجل",use_container_width=True): st.rerun()
-    with st.spinner("جاري تحميل السجل…"):
-        log_data=load_log()
-    if filter_type!="الكل":
-        log_data=[r for r in log_data if r.get("type","")==filter_type]
-    if log_data:
-        st.markdown(f"**إجمالي الأحداث: {len(log_data)}**")
-        st.divider()
-        tc={"➕ إضافة مصروف":"#0d3b2e","✏️ تعديل مصروف":"#1a2e1a","🗑️ حذف مصروف":"#3b0d0d",
+    with st.spinner("تحميل…"): ld=load_log()
+    if ft!="الكل": ld=[r for r in ld if r.get("type","")==ft]
+    if ld:
+        st.markdown(f"**إجمالي: {len(ld)}**"); st.divider()
+        TC={"➕ إضافة مصروف":"#0d3b2e","✏️ تعديل مصروف":"#1a2e1a","🗑️ حذف مصروف":"#3b0d0d",
             "🏖️ تسجيل إجازة":"#0d1f3c","🏖️ إلغاء إجازة":"#1a1a2e","👤 إضافة شخص":"#1a2e1a",
             "🗑️ حذف شخص":"#3b0d0d","✏️ تغيير اسم":"#1a1f3c","⚙️ تغيير إعداد":"#2a1a0d","⚙️ إعداد جديد":"#2a1a0d"}
-        tx={"➕ إضافة مصروف":"#4ade80","✏️ تعديل مصروف":"#86efac","🗑️ حذف مصروف":"#f87171",
+        TX={"➕ إضافة مصروف":"#4ade80","✏️ تعديل مصروف":"#86efac","🗑️ حذف مصروف":"#f87171",
             "🏖️ تسجيل إجازة":"#60a5fa","🏖️ إلغاء إجازة":"#93c5fd","👤 إضافة شخص":"#4ade80",
             "🗑️ حذف شخص":"#f87171","✏️ تغيير اسم":"#a78bfa","⚙️ تغيير إعداد":"#fbbf24","⚙️ إعداد جديد":"#fbbf24"}
-        for entry in log_data:
-            bg=tc.get(entry.get("type",""),"#1a1e2e"); color=tx.get(entry.get("type",""),"#e0e6ff")
-            mb=f'<span style="background:#1a237e;color:#90caf9;border-radius:10px;padding:2px 10px;font-size:.8rem;margin-right:8px;">{entry.get("month","")}</span>' if entry.get("month") else ""
-            st.markdown(f"""<div style="background:{bg};border-radius:10px;padding:12px 18px;
-margin-bottom:8px;direction:rtl;border:1px solid #2a2f45;">
-<div style="display:flex;justify-content:space-between;align-items:center;">
-  <span style="color:{color};font-weight:700;font-size:.95rem;">{entry.get("type","")}</span>
-  <span style="color:#8892b0;font-size:.8rem;">🕐 {entry.get("datetime","")}</span>
-</div>
-<div style="color:#c8cfd8;margin-top:6px;font-size:.9rem;">{mb}{entry.get("details","")}</div>
-</div>""",unsafe_allow_html=True)
-    else:
-        st.info("لا توجد أحداث مسجلة بعد.")
+        for e in ld:
+            bg=TC.get(e.get("type",""),"#1a1e2e"); cl=TX.get(e.get("type",""),"#e0e6ff")
+            mb=('<span style="background:#1a237e;color:#90caf9;border-radius:10px;padding:2px 10px;font-size:.8rem;margin-right:8px;">'+e.get("month","")+'</span>' if e.get("month") else "")
+            st.markdown(
+                '<div style="background:'+bg+';border-radius:10px;padding:12px 18px;margin-bottom:8px;direction:rtl;border:1px solid #2a2f45;">'
+                '<div style="display:flex;justify-content:space-between;align-items:center;">'
+                '<span style="color:'+cl+';font-weight:700;font-size:.95rem;">'+e.get("type","")+'</span>'
+                '<span style="color:#8892b0;font-size:.8rem;">🕐 '+str(e.get("datetime",""))+'</span>'
+                '</div>'
+                '<div style="color:#c8cfd8;margin-top:6px;font-size:.9rem;">'+mb+str(e.get("details",""))+'</div>'
+                '</div>',unsafe_allow_html=True)
+    else: st.info("لا توجد أحداث.")
