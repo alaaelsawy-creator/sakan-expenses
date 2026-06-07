@@ -66,6 +66,7 @@ html, body, [class*="css"] { font-family: 'Tajawal', sans-serif !important; dire
 #  الثوابت
 # ─────────────────────────────────────────────
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
+
 SCRIPT = "https://script.google.com/macros/s/AKfycbx3EAU2AVY3RqHzJJ5aeyV3MMzEIyAPGxHiTZlNMK7Tu5xvKbs53PyQBwDzQv3f_0O6/exec"
 
 
