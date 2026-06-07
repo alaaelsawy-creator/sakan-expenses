@@ -194,46 +194,73 @@ def next_avail_idx(persons, start, vac_month, cl_exempt, skip=None):
 
 def build_rotation(persons, vac_month, cl_exempt, cl_log, weeks=None):
     """
-    المصدر الوحيد للحقيقة لكل بيانات التنظيف.
-    يعيد list of dict — كل عنصر = جمعة واحدة.
+    يبني جدول الدوران.
+    الصف الأول (هذه الجمعة) يُقرأ مباشرة من nextPair المحفوظ في الـ Sheet
+    لضمان التطابق الكامل مع ما اختاره المستخدم.
+    الصفوف التالية تُحسب تلقائياً من الترتيب.
     """
     n=len(persons)
     if not n: return []
     if weeks is None: weeks=max(n,2)
 
-    # نقطة البداية
-    start_idx=0
+    # قراءة nextPair المحفوظ مباشرة
+    saved_np_sec = None
+    saved_np_fir = None
+    start_idx    = 0
     if cl_log:
-        np=( cl_log[0].get("nextPair","") or "").strip()
-        if np:
-            parts=[x.strip() for x in np.split("،") if x.strip()]
-            p0=parts[0] if parts else None
-            if p0 and p0 in persons: start_idx=persons.index(p0)
+        np_raw = (cl_log[0].get("nextPair","") or "").strip()
+        if np_raw:
+            parts = [x.strip() for x in np_raw.split("،") if x.strip()]
+            if len(parts) >= 1 and parts[0] in persons:
+                saved_np_sec = parts[0]
+                start_idx    = persons.index(parts[0])
+            if len(parts) >= 2 and parts[1] in persons:
+                saved_np_fir = parts[1]
 
     fri0=next_friday(); rows=[]; cur=start_idx
+
     for i in range(weeks):
         fri=fri0+timedelta(weeks=i)
-        si,ps=next_avail_idx(persons,cur,vac_month,cl_exempt)
-        if si is None:
-            rows.append({"fri":fri,"fri_str":fri.strftime("%d/%m/%Y"),
-                         "p_sec":"—","p_fir":"—","sec_st":"none","fir_st":"none",
-                         "is_cur":(i==0),"skipped":[]})
-            continue
-        fi,pf=next_avail_idx(persons,(si+1)%n,vac_month,cl_exempt,skip=ps)
-        # من تم تخطيه
-        sk=[]
-        for off in range((si-cur)%n): sk.append(persons[(cur+off)%n])
-        if fi is not None:
-            ex=(si+1)%n
-            for off in range((fi-ex)%n):
-                c=persons[(ex+off)%n]
-                if c!=ps: sk.append(c)
-        rows.append({"fri":fri,"fri_str":fri.strftime("%d/%m/%Y"),
-                     "p_sec":ps,"p_fir":pf or "—",
-                     "sec_st":p_status(ps,vac_month,cl_exempt),
-                     "fir_st":p_status(pf,vac_month,cl_exempt) if pf else "none",
-                     "is_cur":(i==0),"skipped":list(dict.fromkeys(sk))})
-        cur=(si+1)%n
+
+        if i == 0 and saved_np_sec:
+            # الصف الأول: استخدم ما حفظه المستخدم بالضبط
+            ps = saved_np_sec
+            pf = saved_np_fir
+            si = persons.index(ps) if ps in persons else 0
+            sk = []
+            rows.append({
+                "fri":fri,"fri_str":fri.strftime("%d/%m/%Y"),
+                "p_sec":ps,"p_fir":pf or "—",
+                "sec_st":p_status(ps,vac_month,cl_exempt),
+                "fir_st":p_status(pf,vac_month,cl_exempt) if pf else "none",
+                "is_cur":True,"skipped":[]
+            })
+            cur=(si+1)%n
+        else:
+            # الصفوف التالية: احسب من الترتيب
+            si,ps=next_avail_idx(persons,cur,vac_month,cl_exempt)
+            if si is None:
+                rows.append({"fri":fri,"fri_str":fri.strftime("%d/%m/%Y"),
+                             "p_sec":"—","p_fir":"—","sec_st":"none","fir_st":"none",
+                             "is_cur":False,"skipped":[]})
+                continue
+            fi,pf=next_avail_idx(persons,(si+1)%n,vac_month,cl_exempt,skip=ps)
+            sk=[]
+            for off in range((si-cur)%n): sk.append(persons[(cur+off)%n])
+            if fi is not None:
+                ex=(si+1)%n
+                for off in range((fi-ex)%n):
+                    c=persons[(ex+off)%n]
+                    if c!=ps: sk.append(c)
+            rows.append({
+                "fri":fri,"fri_str":fri.strftime("%d/%m/%Y"),
+                "p_sec":ps,"p_fir":pf or "—",
+                "sec_st":p_status(ps,vac_month,cl_exempt),
+                "fir_st":p_status(pf,vac_month,cl_exempt) if pf else "none",
+                "is_cur":False,"skipped":list(dict.fromkeys(sk))
+            })
+            cur=(si+1)%n
+
     return rows
 
 def get_next_gas(gas_log, persons, vac_month, gas_exempt):
