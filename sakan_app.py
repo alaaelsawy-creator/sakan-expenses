@@ -61,7 +61,7 @@ html,body,[class*="css"]{font-family:'Tajawal',sans-serif!important;direction:rt
 #  الثوابت
 # ─────────────────────────────────────────────
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT_URL    = "https://script.google.com/macros/s/AKfycbxoRZMBKrvpyRhvTvMXcFgTmtL2I636vHcd9gxJaHfKEJHUKj4WpI3cgNJ3DJzp9-LD/exec"
+SCRIPT_URL    = "https://script.google.com/macros/s/AKfycbx8d9YH9c2LgvOR_OGw9wDFDGqE0pLHojPmv139wdRnbNHtML-AlBjW2BLtT7JFXxTI/exec"
 MONTHS_AR = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
              "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
              "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
@@ -288,6 +288,94 @@ def get_next_cleaning_week(log, active):
         if sorted([x for x in [w["p_second"], w["p_first"]] if x]) == last_cleaners:
             return schedule[(idx+1) % len(schedule)]
     return schedule[0]
+
+def build_rotation_table(all_persons, month_vacations, cleaning_exempt, log, weeks_ahead=10):
+    """
+    يبني جدول الجمع القادمة بذكاء:
+    - من في إجازة كاملة أو معفى → يُتخطى ويحل مكانه التالي المتاح.
+    - الدورة تستمر بلا توقف (تعود من الأول بعد الأخير).
+    - كل أسبوع: p_second (ثانيه) + p_first (أوله).
+    """
+    from datetime import timedelta
+    n = len(all_persons)
+    if n == 0:
+        return []
+
+    def is_avail(person):
+        if month_vacations.get(person,{}).get("type") == "full": return False
+        if person in cleaning_exempt: return False
+        return True
+
+    def p_status(person):
+        if not person: return "none"
+        if month_vacations.get(person,{}).get("type") == "full": return "vacation"
+        if person in cleaning_exempt: return "exempt"
+        return "active"
+
+    def next_avail(start_idx, skip=None):
+        for offset in range(n):
+            idx = (start_idx + offset) % n
+            p   = all_persons[idx]
+            if p == skip: continue
+            if is_avail(p): return idx, p
+        return None, None
+
+    def skipped_between(from_idx, to_idx, skip=None):
+        skipped = []
+        steps = (to_idx - from_idx) % n
+        for offset in range(steps):
+            p = all_persons[(from_idx + offset) % n]
+            if p != skip: skipped.append(p)
+        return skipped
+
+    # ── نقطة البداية من السجل ──
+    last_next = log[0].get("nextPair","").strip() if log else ""
+    if last_next:
+        parts = [x.strip() for x in last_next.split("،") if x.strip()]
+        p_sec_start = parts[0] if parts else None
+        start_second_idx = all_persons.index(p_sec_start) if p_sec_start and p_sec_start in all_persons else 0
+    else:
+        start_second_idx = 0
+
+    today       = date.today()
+    days_to_fri = (4 - today.weekday()) % 7
+    if days_to_fri == 0: days_to_fri = 7
+    next_fri = today + timedelta(days=days_to_fri)
+
+    rows = []
+    cur_sec_idx = start_second_idx
+
+    for i in range(weeks_ahead):
+        fri = next_fri + timedelta(weeks=i)
+
+        sec_idx, p_sec = next_avail(cur_sec_idx)
+        if sec_idx is None:
+            rows.append({"friday":fri,"fri_str":fri.strftime("%d/%m/%Y"),
+                         "p_second":"—","p_first":"—",
+                         "sec_status":"none","fir_status":"none",
+                         "is_current":(i==0),"sec_skipped":[],"fir_skipped":[]})
+            continue
+
+        fir_idx, p_fir = next_avail((sec_idx+1)%n, skip=p_sec)
+
+        sec_skipped = skipped_between(cur_sec_idx, sec_idx)
+        fir_skipped = skipped_between((sec_idx+1)%n, fir_idx if fir_idx is not None else (sec_idx+1)%n, skip=p_sec) if fir_idx is not None else []
+
+        rows.append({
+            "friday":      fri,
+            "fri_str":     fri.strftime("%d/%m/%Y"),
+            "p_second":    p_sec or "—",
+            "p_first":     p_fir or "—",
+            "sec_status":  p_status(p_sec),
+            "fir_status":  p_status(p_fir),
+            "is_current":  (i == 0),
+            "sec_skipped": sec_skipped,
+            "fir_skipped": fir_skipped,
+        })
+
+        cur_sec_idx = (sec_idx + 1) % n
+
+    return rows
 
 # ─────────────────────────────────────────────
 #  العنوان
@@ -685,25 +773,63 @@ border:2px solid #4ade80;border-radius:16px;padding:18px;text-align:center;margi
 <div style="color:#6ee7b7;font-size:.82rem;">{_sub}</div>
 </div>""",unsafe_allow_html=True)
 
-            # جدول الدورة
-            if len(schedule)>1:
-                st.markdown("##### 🗓️ جدول الدورة الكاملة")
-                cw_idx = cw.get("week_idx",-1) if cw else -1
-                scols = st.columns(min(len(schedule),4))
-                for i,w in enumerate(schedule):
-                    is_now = (i==cw_idx)
-                    ps = w.get("p_second",""); pf = w.get("p_first","")
-                    border = "#4ade80" if is_now else "#2a2f45"
-                    col    = "#4ade80" if is_now else "#8892b0"
-                    icon   = "🧹" if is_now else f"{i+1}"
-                    with scols[i%len(scols)]:
-                        st.markdown(f"""<div style="background:#1a1e2e;border:1px solid {border};
-border-radius:10px;padding:10px;text-align:center;margin-bottom:8px;">
-<div style="font-size:1rem;margin-bottom:4px;">{icon}</div>
-<div style="font-size:.82rem;font-weight:700;">
-  <span style="color:#60a5fa;">🔵 {ps}</span><br>
-  <span style="color:{col};">🟢 {pf}</span>
-</div></div>""",unsafe_allow_html=True)
+            # ── جدول الدوران للجمع القادمة ──
+            rotation = build_rotation_table(SHABAB, month_vacations, cleaning_exempt, cleaning_log,
+                                            weeks_ahead=max(10, len(SHABAB)*2+2))
+
+            if rotation:
+                st.markdown("### 🗓️ جدول الدوران – الجمع القادمة")
+                st.caption("يتحدث تلقائياً بعد كل تسجيل. 🔵 = أسبوعه الثاني  |  🟢 = أسبوعه الأول")
+
+                # رسم الجدول كـ HTML واحد منسّق
+                rows_html = ""
+                for r in rotation:
+                    is_cur = r["is_current"]
+                    bg     = "linear-gradient(135deg,#0d3b2e,#1a4a38)" if is_cur else "#1a1e2e"
+                    border = "2px solid #4ade80" if is_cur else "1px solid #2a2f45"
+                    icon   = "🧹" if is_cur else ""
+
+                    def _person_html(person, status, turn_icon, bold=False):
+                        if not person or person == "—": return f'<span style="color:#555;">{turn_icon} —</span>'
+                        if status == "vacation":
+                            return f'<span style="color:#fbbf24;font-size:.82rem;">{turn_icon} {person} <small>🏖️إجازة</small></span>'
+                        if status == "exempt":
+                            return f'<span style="color:#f87171;font-size:.82rem;">{turn_icon} {person} <small>🚫معفى</small></span>'
+                        color  = "#60a5fa" if turn_icon == "🔵" else "#4ade80"
+                        weight = "800" if bold else "600"
+                        size   = ".95rem" if bold else ".85rem"
+                        return f'<span style="color:{color};font-weight:{weight};font-size:{size};">{turn_icon} {person}</span>'
+
+                    sec_html = _person_html(r["p_second"], r["sec_status"], "🔵", bold=is_cur)
+                    fir_html = _person_html(r["p_first"],  r["fir_status"], "🟢", bold=is_cur)
+
+                    # من تم تخطيه
+                    skip_all = r["sec_skipped"] + r["fir_skipped"]
+                    skip_html = ""
+                    if skip_all:
+                        names = "، ".join(skip_all)
+                        skip_html = f'<div style="color:#6b7280;font-size:.72rem;margin-top:3px;">⏭️ تخطي: {names}</div>'
+
+                    fri_color = "#4ade80" if is_cur else "#8892b0"
+                    cur_label = "<br><small style='color:#86efac;'>← هذه الجمعة 🧹</small>" if is_cur else ""
+
+                    rows_html += f"""
+<div style="background:{bg};border:{border};border-radius:12px;
+     padding:12px 18px;margin-bottom:8px;direction:rtl;">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+    <div>
+      {sec_html}<br>{fir_html}
+      {skip_html}
+    </div>
+    <div style="text-align:left;">
+      <span style="color:{fri_color};font-size:.85rem;font-weight:600;">
+        📅 الجمعة {r["fri_str"]}{cur_label}
+      </span>
+    </div>
+  </div>
+</div>"""
+
+                st.markdown(rows_html, unsafe_allow_html=True)
 
             # ── نموذج التسجيل بدون clear_on_submit لمنع تبدّل الاختيارات ──
             st.markdown("### ✅ تسجيل دور التنظيف")
