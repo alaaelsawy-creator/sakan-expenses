@@ -61,7 +61,7 @@ html,body,[class*="css"]{font-family:'Tajawal',sans-serif!important;direction:rt
 #  الثوابت
 # ─────────────────────────────────────────────
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT_URL    = "https://script.google.com/macros/s/AKfycbykqi8rGN1Lbqfco18PwyxWP2m2cwk4kdKzNR3rAHNoE18WMXZ3JIe66zw7WCvHkril/exec"
+SCRIPT_URL    = "https://script.google.com/macros/s/AKfycby3MkIel9ckC5CINRTXc0byW49ezeiItz9xZHIHHmfkDJRdbDW156_UqgjXkyGpIPrn/exec"
 MONTHS_AR = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
              "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
              "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
@@ -383,7 +383,7 @@ def build_rotation_table(all_persons, month_vacations, cleaning_exempt, log, wee
 st.markdown("""
 <div class="app-header">
   <h1>🏠 تنظيم السكن</h1>
-  <p>إعداد أبو زين • تتبع وتوزيع المصاريف وتوزيع الأدوار بدقة وشفافية</p>
+  <p>إعداد أبو زين • تتبع وتوزيع المصاريف والأدوار بدقة وشفافية</p>
 </div>""", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
@@ -753,162 +753,139 @@ border-radius:10px;padding:10px;text-align:center;margin-bottom:8px;">
 
             st.divider()
 
-            # ── جدول الدوران الكامل ──
+            # ── جدول الدوران التفاعلي ──
+            # عدد الأسابيع = عدد الأشخاص (دورة كاملة)
+            n_weeks = max(len(SHABAB), 2)
             rotation = build_rotation_table(
                 SHABAB, month_vacations, cleaning_exempt, cleaning_log,
-                weeks_ahead=max(10, len(SHABAB)*2+2)
+                weeks_ahead=n_weeks
             )
-
-            st.markdown("### 🗓️ جدول الدوران – الجمع القادمة")
-            st.caption("🔵 = أسبوعه الثاني  |  🟢 = أسبوعه الأول  |  يتحدث تلقائياً بعد كل تسجيل")
-
-            for r in rotation:
-                is_cur  = r["is_current"]
-                p_sec   = r["p_second"]
-                p_fir   = r["p_first"]
-                sec_st  = r["sec_status"]
-                fir_st  = r["fir_status"]
-                skipped = r["sec_skipped"] + r["fir_skipped"]
-
-                # ألوان
-                def _clr(status, base):
-                    if status == "vacation": return "#fbbf24"
-                    if status == "exempt":   return "#f87171"
-                    return base
-
-                sec_clr = _clr(sec_st, "#60a5fa")
-                fir_clr = _clr(fir_st, "#4ade80")
-
-                # أيقونة الحالة
-                def _sfx(status):
-                    if status == "vacation": return " 🏖️"
-                    if status == "exempt":   return " 🚫"
-                    return ""
-
-                sec_txt = p_sec + _sfx(sec_st)
-                fir_txt = p_fir + _sfx(fir_st)
-
-                bg     = "#0d3b2e" if is_cur else "#1a1e2e"
-                border = "2px solid #4ade80" if is_cur else "1px solid #2a2f45"
-                fw_sec = "800" if is_cur else "600"
-                fw_fir = "800" if is_cur else "600"
-                fri_clr2 = "#4ade80" if is_cur else "#8892b0"
-                cur_tag  = "  ← 🧹 هذه الجمعة" if is_cur else ""
-
-                skip_line = ""
-                if skipped:
-                    skip_line = (
-                        '<br><span style="color:#6b7280;font-size:.72rem;">'
-                        + "⏭️ تخطي: " + "، ".join(skipped)
-                        + "</span>"
-                    )
-
-                row_html = (
-                    '<div style="background:' + bg + ';border:' + border + ';'
-                    'border-radius:12px;padding:12px 18px;margin-bottom:8px;direction:rtl;">'
-                    '<div style="display:flex;justify-content:space-between;'
-                    'align-items:center;flex-wrap:wrap;gap:8px;">'
-                    '<div>'
-                    '<span style="color:' + sec_clr + ';font-weight:' + fw_sec + ';font-size:.9rem;">🔵 ' + sec_txt + '</span>'
-                    '<br>'
-                    '<span style="color:' + fir_clr + ';font-weight:' + fw_fir + ';font-size:.9rem;">🟢 ' + fir_txt + '</span>'
-                    + skip_line +
-                    '</div>'
-                    '<div style="text-align:left;">'
-                    '<span style="color:' + fri_clr2 + ';font-size:.85rem;font-weight:600;">'
-                    '📅 الجمعة ' + r["fri_str"] + cur_tag +
-                    '</span>'
-                    '</div>'
-                    '</div>'
-                    '</div>'
-                )
-                st.markdown(row_html, unsafe_allow_html=True)
-
-            # ── نموذج التسجيل ──
-            st.markdown("### ✅ تسجيل دور التنظيف")
 
             today = date.today()
             days_to_fri = (4 - today.weekday()) % 7
             if days_to_fri == 0: days_to_fri = 7
             next_friday = today + timedelta(days=days_to_fri)
 
-            st.markdown(f"**📅 يوم التنظيف: الجمعة {next_friday.strftime('%d/%m/%Y')}**")
+            st.markdown("### 🗓️ جدول الدوران – الجمع القادمة")
+            st.caption("🔵 أسبوعه الثاني  |  🟢 أسبوعه الأول  |  اختر الأسماء من القوائم ثم احفظ")
 
-            # اقتراح من الجدول
-            sug_sec = rotation[0]["p_second"] if rotation else ""
-            sug_fir = rotation[0]["p_first"]  if rotation else ""
-            sug_next_sec = rotation[1]["p_second"] if len(rotation) > 1 else ""
-            sug_next_fir = rotation[1]["p_first"]  if len(rotation) > 1 else ""
+            # بناء الجدول: كل صف = جمعة + قائمتان منسدلتان
+            # نحتاج أولاً نعرف كل الاختيارات قبل رسم الصفوف
+            # نستخدم session_state لحفظ الاختيارات عبر reruns
+            if "cl_selections" not in st.session_state:
+                st.session_state.cl_selections = {}
 
-            st.markdown("**🔵 من عليه أسبوعه الثاني هذه الجمعة؟**")
-            clean_second_choice = st.radio(
-                "ثانيه", options=active_for_cleaning,
-                index=active_for_cleaning.index(sug_sec) if sug_sec in active_for_cleaning else 0,
-                horizontal=True, key="clean_second_radio", label_visibility="collapsed"
-            )
+            # مزامنة الاختيارات مع الجدول المقترح
+            for i, r in enumerate(rotation):
+                key_s = "cl_sec_" + str(i)
+                key_f = "cl_fir_" + str(i)
+                sug_s = r["p_second"]
+                sug_f = r["p_first"]
+                # فقط إذا لم يكن المستخدم غيّر الاختيار يدوياً
+                if key_s not in st.session_state.cl_selections:
+                    st.session_state.cl_selections[key_s] = sug_s if sug_s in SHABAB else (SHABAB[0] if SHABAB else "")
+                if key_f not in st.session_state.cl_selections:
+                    st.session_state.cl_selections[key_f] = sug_f if sug_f in SHABAB else (SHABAB[1] if len(SHABAB)>1 else "")
 
-            st.markdown("**🟢 من عليه أسبوعه الأول هذه الجمعة؟**")
-            first_opts = [p for p in active_for_cleaning if p != clean_second_choice]
-            sug_fi_idx = first_opts.index(sug_fir) if sug_fir in first_opts else 0
-            clean_first_choice = st.radio(
-                "أوله", options=first_opts if first_opts else active_for_cleaning,
-                index=min(sug_fi_idx, max(0, len(first_opts)-1)),
-                horizontal=True, key="clean_first_radio", label_visibility="collapsed"
-            )
+            for i, r in enumerate(rotation):
+                is_cur   = r["is_current"]
+                skipped  = r["sec_skipped"] + r["fir_skipped"]
+                fri_str  = r["fri_str"]
+                cur_tag  = "  ← 🧹 هذه الجمعة" if is_cur else ""
+                bg_color = "#0a1f14" if is_cur else "#141824"
+                border_s = "2px solid #4ade80" if is_cur else "1px solid #2a2f45"
+                fri_clr  = "#4ade80" if is_cur else "#8892b0"
 
-            st.markdown("---")
-            st.markdown("**🔜 الدور القادم (الجمعة التالية)**")
-            col_np1, col_np2 = st.columns(2)
-            with col_np1:
-                st.markdown("🔵 أسبوعه الثاني")
-                ns_idx = active_for_cleaning.index(sug_next_sec) if sug_next_sec in active_for_cleaning else 0
-                next_second_choice = st.radio(
-                    "ق-ثانيه", options=active_for_cleaning, index=ns_idx,
-                    horizontal=True, key="next_second_radio", label_visibility="collapsed"
-                )
-            with col_np2:
-                st.markdown("🟢 أسبوعه الأول")
-                nf_opts = [p for p in active_for_cleaning if p != next_second_choice]
-                nf_idx  = nf_opts.index(sug_next_fir) if sug_next_fir in nf_opts else 0
-                next_first_choice = st.radio(
-                    "ق-أوله", options=nf_opts if nf_opts else active_for_cleaning,
-                    index=min(nf_idx, max(0, len(nf_opts)-1)),
-                    horizontal=True, key="next_first_radio", label_visibility="collapsed"
+                # رأس الصف
+                st.markdown(
+                    '<div style="background:' + bg_color + ';border:' + border_s +
+                    ';border-radius:14px;padding:14px 18px;margin-bottom:10px;direction:rtl;">'
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
+                    '<span style="color:' + fri_clr + ';font-weight:700;font-size:.95rem;">📅 الجمعة ' + fri_str + cur_tag + '</span>'
+                    '</div>',
+                    unsafe_allow_html=True
                 )
 
-            cleaning_note = st.text_input(
-                "ملاحظة (اختياري)", placeholder="مثال: تنظيف عميق", key="cleaning_note_input"
-            )
+                # القائمتان المنسدلتان داخل عمودين
+                col_s, col_f, col_btn = st.columns([2, 2, 1])
 
-            if st.button("💾 حفظ دور التنظيف", type="primary",
-                         use_container_width=True, key="save_cleaning_btn"):
-                if clean_second_choice == clean_first_choice:
-                    st.warning("⚠️ يجب أن يكون الشخصان مختلفَين.")
-                elif next_second_choice == next_first_choice:
-                    st.warning("⚠️ الدور القادم: يجب أن يكون الشخصان مختلفَين.")
-                else:
-                    cleaner_str = clean_second_choice + "، " + clean_first_choice
-                    next_str    = next_second_choice  + "، " + next_first_choice
-                    with st.spinner("جاري الحفظ…"):
-                        res = call_script({
-                            "action":   "addCleaningEntry",
-                            "cleaner":  cleaner_str,
-                            "weekFrom": str(next_friday),
-                            "weekTo":   str(next_friday),
-                            "weekNum":  "1",
-                            "nextPair": next_str,
-                            "note":     cleaning_note,
-                        })
-                    if "Success" in res:
-                        wa_cleaning(clean_second_choice, clean_first_choice,
-                                    next_friday.strftime("%d/%m/%Y"),
-                                    next_second_choice, next_first_choice, cleaning_note)
-                        st.success("✅ تم التسجيل! القادم: 🔵" + next_second_choice + " + 🟢" + next_first_choice)
-                        st.session_state.pop("cleaning_log", None)
-                        clear_all_cache()
-                        st.rerun()
-                    else:
-                        st.error("خطأ: " + res)
+                key_s = "cl_sec_" + str(i)
+                key_f = "cl_fir_" + str(i)
+
+                with col_s:
+                    cur_s = st.session_state.cl_selections.get(key_s, SHABAB[0] if SHABAB else "")
+                    s_idx = SHABAB.index(cur_s) if cur_s in SHABAB else 0
+                    sel_s = st.selectbox(
+                        "🔵 أسبوعه الثاني",
+                        options=SHABAB,
+                        index=s_idx,
+                        key="sel_s_" + str(i),
+                        label_visibility="visible"
+                    )
+                    st.session_state.cl_selections[key_s] = sel_s
+
+                with col_f:
+                    cur_f = st.session_state.cl_selections.get(key_f, SHABAB[1] if len(SHABAB)>1 else "")
+                    # استثناء من اختير للثاني
+                    fir_opts = [p for p in SHABAB if p != sel_s]
+                    if not fir_opts: fir_opts = SHABAB
+                    f_idx = fir_opts.index(cur_f) if cur_f in fir_opts else 0
+                    sel_f = st.selectbox(
+                        "🟢 أسبوعه الأول",
+                        options=fir_opts,
+                        index=f_idx,
+                        key="sel_f_" + str(i),
+                        label_visibility="visible"
+                    )
+                    st.session_state.cl_selections[key_f] = sel_f
+
+                with col_btn:
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    if is_cur:
+                        if st.button("💾 حفظ", key="save_cl_" + str(i), type="primary", use_container_width=True):
+                            if sel_s == sel_f:
+                                st.warning("⚠️ يجب أن يكون الشخصان مختلفَين.")
+                            else:
+                                # الدور القادم = الصف التالي في الجدول
+                                if i + 1 < len(rotation):
+                                    next_s_key = "cl_sec_" + str(i+1)
+                                    next_f_key = "cl_fir_" + str(i+1)
+                                    next_sec = st.session_state.cl_selections.get(next_s_key, rotation[i+1]["p_second"])
+                                    next_fir = st.session_state.cl_selections.get(next_f_key, rotation[i+1]["p_first"])
+                                else:
+                                    next_sec = rotation[0]["p_second"]
+                                    next_fir = rotation[0]["p_first"]
+                                cleaner_str = sel_s + "، " + sel_f
+                                next_str    = next_sec + "، " + next_fir
+                                with st.spinner("حفظ…"):
+                                    res = call_script({
+                                        "action":   "addCleaningEntry",
+                                        "cleaner":  cleaner_str,
+                                        "weekFrom": str(next_friday),
+                                        "weekTo":   str(next_friday),
+                                        "weekNum":  "1",
+                                        "nextPair": next_str,
+                                        "note":     "",
+                                    })
+                                if "Success" in res:
+                                    wa_cleaning(sel_s, sel_f,
+                                                next_friday.strftime("%d/%m/%Y"),
+                                                next_sec, next_fir, "")
+                                    st.success("✅ تم! القادم: 🔵" + next_sec + " + 🟢" + next_fir)
+                                    st.session_state.pop("cleaning_log", None)
+                                    st.session_state.pop("cl_selections", None)
+                                    clear_all_cache()
+                                    st.rerun()
+                                else:
+                                    st.error("خطأ: " + res)
+
+                # تذييل الصف: من تم تخطيه
+                if skipped:
+                    st.markdown(
+                        '<div style="color:#6b7280;font-size:.75rem;padding:0 4px 8px;">⏭️ تخطي: ' + "، ".join(skipped) + '</div>',
+                        unsafe_allow_html=True
+                    )
+                st.markdown('</div>', unsafe_allow_html=True)
 
             # سجل التنظيف
             st.markdown("### 📋 سجل التنظيف")
