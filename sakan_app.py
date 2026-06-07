@@ -367,31 +367,16 @@ nxt_gas = get_next_gas(gas_log, SHABAB, vac_month, gas_ex)
 maybe_remind(rotation, nxt_gas)
 
 # ══════════════════════════════════════════════
-#  بطاقات التنبيه — من rotation[0] مباشرة
+#  بطاقة الأنبوبة فقط — التنظيف في جدول الخدمات
 # ══════════════════════════════════════════════
 if SHABAB:
-    a1,a2=st.columns(2)
-    with a1:
-        r0=rotation[0] if rotation else None
-        _s=r0["p_sec"] if r0 else "—"; _f=r0["p_fir"] if r0 else "—"
-        _d=_s+(" و "+_f if _f and _f!="—" else "")
-        _b="🔵 "+_s+" (ثانيه)  |  🟢 "+(_f if _f and _f!="—" else "—")+" (أوله)"
-        st.markdown(
-            '<div style="background:linear-gradient(135deg,#0d3b2e,#1a4a38);border:2px solid #4ade80;'
-            'border-radius:14px;padding:14px 20px;margin-bottom:10px;">'
-            '<div style="color:#86efac;font-size:.8rem;">🧹 دور التنظيف هذه الجمعة</div>'
-            '<div style="color:#4ade80;font-size:1.4rem;font-weight:800;">'+_d+'</div>'
-            '<div style="color:#6ee7b7;font-size:.8rem;margin-top:2px;">'+_b+'</div>'
-            '</div>',unsafe_allow_html=True)
-    with a2:
-        _g=nxt_gas or "—"
-        st.markdown(
-            '<div style="background:linear-gradient(135deg,#0d1f3c,#1a2e4a);border:2px solid #60a5fa;'
-            'border-radius:14px;padding:14px 20px;margin-bottom:10px;">'
-            '<div style="color:#93c5fd;font-size:.8rem;">🔵 دور ملء الأنبوبة</div>'
-            '<div style="color:#60a5fa;font-size:1.4rem;font-weight:800;">'+_g+'</div>'
-            '<div style="color:#7dd3fc;font-size:.8rem;margin-top:2px;">عليه الدور القادم</div>'
-            '</div>',unsafe_allow_html=True)
+    _g = nxt_gas or "—"
+    st.markdown(
+        '<div style="background:linear-gradient(135deg,#0d1f3c,#1a2e4a);border:2px solid #60a5fa;'
+        'border-radius:14px;padding:14px 20px;margin-bottom:10px;max-width:400px;">'
+        '<div style="color:#93c5fd;font-size:.8rem;">🔵 دور ملء الأنبوبة القادم</div>'
+        '<div style="color:#60a5fa;font-size:1.4rem;font-weight:800;">'+_g+'</div>'
+        '</div>', unsafe_allow_html=True)
     st.divider()
 
 # ══════════════════════════════════════════════
