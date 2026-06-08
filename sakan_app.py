@@ -511,7 +511,7 @@ with tab3:
                             else: st.error(res)
     else: st.info("لا توجد أي مصاريف مسجلة توافق خيارات التصفية المعروضة.")
 
-# ── ٤ جدول خدمات الشقة (النسخة المعزولة والمحمية بالكامل) ──
+# ── ٤ جدول خدمات الشقة (النسخة الآمنة والثابتة تماماً) ──
 with tab4:
     st.subheader("🏠 إدارة وتوزيع جدول خدمات الشقة الدوري")
     sv1,sv2,sv3=st.tabs(["🧹 خدمات التنظيف الدورية","🔵 دور ملء أنبوبة الغاز","🚫 الإعفاءات والاستثناءات"])
@@ -520,7 +520,7 @@ with tab4:
     with sv1:
         st.markdown("""<div class="info-box">
 🧹 <b>آلية عمل تدوير نظام النظافة الذكي:</b> في كل يوم جمعة يُكلف شخصان بالتنظيف — 🔵 (صاحب الأسبوع الثاني والأخير) + 🟢 (صاحب الأسبوع الأول والجديد).<br>
-تم قفل واجهة الاختيارات داخل <b>نموذج مغلق (Form)</b> لمنع الصفحة من إعادة التحميل أو تصفير اختياراتك أثناء التعديل والتبديل اليدوي للأسماء.
+تم إصلاح واجهة الاختيار وتثبيت مفاتيح الاستمارة (Form) لمنع الـ Rerun تماماً عند التغيير اليدوي للقوائم المنسدلة.
 </div>""",unsafe_allow_html=True)
 
         if not SHABAB:
@@ -543,84 +543,79 @@ with tab4:
 
             st.divider()
 
-            st.markdown("### 🗓️ جدول استقراء التدوير للأسابيع القادمة")
-            st.caption("🔵 = أسبوعه الثاني الفعلي | 🟢 = أسبوعه الأول الجديد")
-
             if not rotation:
                 st.info("لا توجد مصفوفة دوران منشأة.")
             else:
                 next_fri_date = rotation[0]["fri"]
+                
+                # استخراج اقتراحات النظام للأسابيع (الحالي والقادم) لإدخالها كـ Index افتراضي آمن
+                r_curr = rotation[0]
+                r_next = rotation[1] if len(rotation) > 1 else r_curr
+                
+                idx_curr_sec = SHABAB.index(r_curr["p_sec"]) if r_curr["p_sec"] in SHABAB else 0
+                idx_curr_fir = SHABAB.index(r_curr["p_fir"]) if r_curr["p_fir"] in SHABAB else (1 if len(SHABAB)>1 else 0)
+                
+                idx_next_sec = SHABAB.index(r_next["p_sec"]) if r_next["p_sec"] in SHABAB else 0
+                idx_next_fir = SHABAB.index(r_next["p_fir"]) if r_next["p_fir"] in SHABAB else (1 if len(SHABAB)>1 else 0)
 
-                # 🛠️ هنا الحل الجذري: فتح نموذج استمارة (st.form) يعزل القوائم المنسدلة تماماً ويمنع الصفحة من الـ Rerun أثناء الاختيار
-                with st.form("cleaning_rotation_form"):
+                # 🛠️ فتح النموذج المحمي بمفاتيح ثابتة ومستقرة لا تتأثر بالصفحة
+                with st.form("secure_cleaning_form"):
                     
-                    for i, r in enumerate(rotation):
-                        is_cur  = (i == 0)
-                        bg   = "#0a1f14" if is_cur else "#141824"
-                        bord = "2px solid #4ade80" if is_cur else "1px solid #2a2f45"
-                        fcol = "#4ade80" if is_cur else "#8892b0"
-                        ctag = "  ← 🧹 دور الجمعة القريبة الحالية" if is_cur else ""
+                    # 1️⃣ قسم الجمعة الحالية المباشرة
+                    st.markdown(
+                        f'<div style="background:#0a1f14;border:2px solid #4ade80;border-radius:14px;padding:12px 16px;margin-bottom:12px;">'
+                        f'<div style="color:#4ade80;font-weight:700;font-size:.95rem;margin-bottom:8px;">'
+                        f'📅 دور الجمعة القريبة الحالية (تاريخ: {r_curr["fri_str"]})</div>', unsafe_allow_html=True)
+                    
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        choose_curr_sec = st.selectbox("🔵 أسبوعه الثاني المكمل (الحالي)", options=SHABAB, index=idx_curr_sec, key="cl_current_sec")
+                    with c2:
+                        choose_curr_fir = st.selectbox("🟢 أسبوعه الأول الجديد (الحالي)",  options=SHABAB, index=idx_curr_fir, key="cl_current_fir")
+                    st.markdown('</div>', unsafe_allow_html=True)
 
-                        st.markdown(
-                            f'<div style="background:{bg};border:{bord};border-radius:14px;padding:12px 16px;margin-bottom:8px;">'
-                            f'<div style="color:{fcol};font-weight:700;font-size:.9rem;margin-bottom:8px;">'
-                            f'📅 جمعة تاريخ: {r["fri_str"]}{ctag}</div>',
-                            unsafe_allow_html=True)
-
-                        idx_sec = SHABAB.index(r["p_sec"]) if r["p_sec"] in SHABAB else 0
-                        idx_fir = SHABAB.index(r["p_fir"]) if r["p_fir"] in SHABAB else (1 if len(SHABAB)>1 else 0)
-
-                        c1, c2 = st.columns(2)
-                        with c1:
-                            st.selectbox("🔵 أسبوعه الثاني المكمل", options=SHABAB, index=idx_sec, key=f"form_cl_sec_{r['fri_str']}")
-                        with c2:
-                            st.selectbox("🟢 أسبوعه الأول الجديد",  options=SHABAB, index=idx_fir, key=f"form_cl_fir_{r['fri_str']}")
-
-                        if r.get("skipped"):
-                            st.markdown(
-                                f'<div style="color:#6b7280;font-size:.75rem;margin-top:4px;">⏭️ تم تخطي أسماء تلقائياً للغياب/الإعفاء: '
-                                f'{", ".join(r["skipped"])}</div>', unsafe_allow_html=True)
-                        st.markdown('</div>', unsafe_allow_html=True)
+                    # 2️⃣ قسم الجمعة التالية (المسار القادم)
+                    st.markdown(
+                        f'<div style="background:#141824;border:1px solid #2a2f45;border-radius:14px;padding:12px 16px;margin-bottom:12px;">'
+                        f'<div style="color:#8892b0;font-weight:700;font-size:.95rem;margin-bottom:8px;">'
+                        f'🔜 دور الجمعة التالية اللاحقة (تاريخ: {r_next["fri_str"]})</div>', unsafe_allow_html=True)
+                    
+                    c3, c4 = st.columns(2)
+                    with c3:
+                        choose_next_sec = st.selectbox("🔵 أسبوعه الثاني المكمل (القادم)", options=SHABAB, index=idx_next_sec, key="cl_next_sec")
+                    with c4:
+                        choose_next_fir = st.selectbox("🟢 أسبوعه الأول الجديد (القادم)",  options=SHABAB, index=idx_next_fir, key="cl_next_fir")
+                    st.markdown('</div>', unsafe_allow_html=True)
 
                     st.markdown("---")
-                    cl_note_val = st.text_input("إضافة ملاحظة إضافية للجدول (اختياري)", placeholder="مثال: تنظيف عميق للمطبخ…")
+                    cl_note_val = st.text_input("إضافة ملاحظة إضافية لجدول النظافة (اختياري)", placeholder="مثال: غسيل السجاد أو المطبخ…")
 
-                    # زر التقديم الخاص بالفورم (Form Submit Button) وهو الوحيد الذي يقوم بالإرسال والحفظ
+                    # زر التقديم المسؤول صراحةً عن معالجة البيانات وحفظها دفعة واحدة
                     submit_save = st.form_submit_button("💾 اعتماد وحفظ دور هذا الأسبوع نهائياً", type="primary", use_container_width=True)
                     
                     if submit_save:
-                        fri_str_0 = rotation[0]["fri_str"]
-                        fri_str_1 = rotation[1]["fri_str"] if len(rotation) > 1 else fri_str_0
-
-                        # سحب القيم من الـ session_state بعد تجميدها داخل الفورم بنجاح
-                        _sec     = st.session_state[f"form_cl_sec_{fri_str_0}"]
-                        _fir     = st.session_state[f"form_cl_fir_{fri_str_0}"]
-                        _nxt_sec = st.session_state[f"form_cl_sec_{fri_str_1}"] if f"form_cl_sec_{fri_str_1}" in st.session_state else _sec
-                        _nxt_fir = st.session_state[f"form_cl_fir_{fri_str_1}"] if f"form_cl_fir_{fri_str_1}" in st.session_state else _fir
-
-                        if not _sec or not _fir:
-                            st.warning("⚠️ لا توجد أسماء صالحة في الاختيارات.")
-                        elif _sec == _fir:
-                            st.warning("⚠️ خطأ في التخصيص: لا يمكن اختيار نفس الشخص للقيام بالدورين (الأول والثاني) في نفس الجمعة.")
+                        if choose_curr_sec == choose_curr_fir:
+                            st.error("⚠️ خطأ في التخصيص: لا يمكن إسناد المهمتين (الأول والثاني) لنفس الشخص في نفس الأسبوع.")
                         else:
-                            cleaner_str  = f"{_sec}، {_fir}"
-                            next_str     = f"{_nxt_sec}، {_nxt_fir}"
+                            cleaner_str  = f"{choose_curr_sec}، {choose_curr_fir}"
+                            next_str     = f"{choose_next_sec}، {choose_next_fir}"
                             fri_str_save = next_fri_date.strftime("%d/%m/%Y")
                             
-                            # تنفيذ عملية الحفظ الفعلية وإرسال البيانات للـ API بعد الضغط على الزر الصريح
-                            res = api({
-                                "action":   "addCleaningEntry",
-                                "cleaner":  cleaner_str,
-                                "weekFrom": str(next_fri_date),
-                                "weekTo":   str(next_fri_date),
-                                "weekNum":  "1",
-                                "nextPair": next_str,
-                                "note":     cl_note_val,
-                            })
+                            with st.spinner("جاري الترحيل والحفظ الفعلي بالسجلات…"):
+                                res = api({
+                                    "action":   "addCleaningEntry",
+                                    "cleaner":  cleaner_str,
+                                    "weekFrom": str(next_fri_date),
+                                    "weekTo":   str(next_fri_date),
+                                    "weekNum":  "1",
+                                    "nextPair": next_str,
+                                    "note":     cl_note_val,
+                                })
+                            
                             if "Success" in res:
-                                wa_cleaning(_sec, _fir, fri_str_save, _nxt_sec, _nxt_fir)
-                                st.success(f"✅ تم الحفظ بنجاح تام! الدور المقيد الحالي: {_sec} و {_fir} | المسار القادم المعتمد: {_nxt_sec} و {_nxt_fir}")
-                                st.cache_data.clear()
+                                wa_cleaning(choose_curr_sec, choose_curr_fir, fri_str_save, choose_next_sec, choose_next_fir)
+                                st.success(f"✅ تم الحفظ بنجاح تام! المسؤولون: {cleaner_str} | المسار القادم المعتمد: {next_str}")
+                                clr()
                                 st.rerun()
                             else:
                                 st.error("❌ خطأ أثناء معالجة الخادم: " + res)
