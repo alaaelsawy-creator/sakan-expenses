@@ -285,7 +285,7 @@ def maybe_remind(rotation, next_gas):
         st.session_state["last_gas_remind"]=ts
 
 # ══════════════════════════════════════════════
-#  العنوان
+#  العنوان الرئيسي
 # ══════════════════════════════════════════════
 st.markdown("""<div class="app-header">
   <h1>🏠 تنظيم السكن</h1>
@@ -308,14 +308,28 @@ cl_log   = load_cl()
 gas_log  = load_gas()
 
 # ══════════════════════════════════════════════
-#  شريط الإعدادات
+#  شريط الإعدادات العلوي (معدل ومثبت الاختيار)
 # ══════════════════════════════════════════════
 cur_date=datetime.now()
 month_opts=[f"{m:02d} – {MONTHS_AR[datetime(2026,m,1).strftime('%B')]} 2026" for m in range(1,13)]
 c1,c2,c3,c4,c5=st.columns([2,1,1,1,1])
-with c1: sel_month_ar=st.selectbox("📅 الشهر",month_opts,index=cur_date.month-1)
+
+with c1:
+    # استخدام الـ Session State لمنع قفز المؤشر وارتداده للشهر الحالي بعد الضغط على أزرار الحفظ
+    if "selected_month_index" not in st.session_state:
+        st.session_state["selected_month_index"] = cur_date.month - 1
+
+    sel_month_ar = st.selectbox(
+        "📅 الشهر", 
+        month_opts, 
+        index=st.session_state["selected_month_index"],
+        key="month_selector_widget"
+    )
+    # تحديث الذاكرة فوراً بناء على الاختيار الحالي
+    st.session_state["selected_month_index"] = month_opts.index(sel_month_ar)
+
 with c2:
-    mi=month_opts.index(sel_month_ar); sel_m=mi+1; sel_y=2026
+    mi=st.session_state["selected_month_index"]; sel_m=mi+1; sel_y=2026
     dim=calendar.monthrange(sel_y,sel_m)[1]; st.metric("📆 أيام الشهر",dim)
 with c3:
     rent_val=float(settings.get("total_rent",0.0))
@@ -393,7 +407,7 @@ if SHABAB:
     st.divider()
 
 # ══════════════════════════════════════════════
-#  التبويبات
+#  التبويبات الرئيسية
 # ══════════════════════════════════════════════
 tab1,tab2,tab3,tab4,tab5,tab6,tab7=st.tabs([
     "📊 الملخص","➕ إضافة مصروف","📜 سجل المصاريف",
@@ -504,12 +518,12 @@ with tab3:
                             else: st.error(res)
     else: st.info("لا توجد مصاريف.")
 
-# ── ٤ خدمات الشقة ────────────────────────────
+# ── ٤ خدمات الشقة (معدل ومثبت لحفظ الأسماء) ──
 with tab4:
     st.subheader("🏠 خدمات الشقة")
     sv1,sv2,sv3=st.tabs(["🧹 التنظيف","🔵 الأنبوبة","🚫 الإعفاءات"])
 
-    # ────── التنظيف (النسخة المصلحة والمستقرة تماماً لمنع الارتداد والتصفير) ──────
+    # ────── التنظيف (النسخة المصلحة الشاملة ضد التصفير) ──────
     with sv1:
         st.markdown("""<div class="info-box">
 🧹 <b>نظام الدوران:</b> كل جمعة شخصان — 🔵 أسبوعه الثاني + 🟢 أسبوعه الأول.<br>
@@ -545,10 +559,9 @@ with tab4:
             else:
                 next_fri_date = rotation[0]["fri"]
 
-                # ── رسم عناصر القوائم المنسدلة بمفاتيح فريدة مستقرة تعتمد على الـ Date ──
+                # بناء عناصر القوائم المنسدلة بمفاتيح معتمدة على التاريخ الصريح لضمان القراءة الصحيحة
                 for i, r in enumerate(rotation):
-                    is_cur  = r["is_cur"]
-                    skipped = r["skipped"]
+                    is_cur  = (i == 0)
                     bg   = "#0a1f14" if is_cur else "#141824"
                     bord = "2px solid #4ade80" if is_cur else "1px solid #2a2f45"
                     fcol = "#4ade80" if is_cur else "#8892b0"
@@ -560,7 +573,6 @@ with tab4:
                         f'📅 الجمعة {r["fri_str"]}{ctag}</div>',
                         unsafe_allow_html=True)
 
-                    # تحديد الفهرس الافتراضي الآمن
                     idx_sec = SHABAB.index(r["p_sec"]) if r["p_sec"] in SHABAB else 0
                     idx_fir = SHABAB.index(r["p_fir"]) if r["p_fir"] in SHABAB else (1 if len(SHABAB)>1 else 0)
 
@@ -570,20 +582,20 @@ with tab4:
                     with c2:
                         st.selectbox("🟢 أسبوعه الأول",  options=SHABAB, index=idx_fir, key=f"cl_fir_{r['fri_str']}")
 
-                    if skipped:
+                    if r.get("skipped"):
                         st.markdown(
                             '<div style="color:#6b7280;font-size:.75rem;margin-top:4px;">⏭️ تخطي: '
-                            + "، ".join(skipped) + '</div>', unsafe_allow_html=True)
+                            + "، ".join(r["skipped"]) + '</div>', unsafe_allow_html=True)
                     st.markdown('</div>', unsafe_allow_html=True)
 
                 st.markdown("---")
                 cl_note_val = st.text_input("ملاحظة (اختياري)", placeholder="مثال: تنظيف عميق", key="cl_note_inp")
 
                 if st.button("💾 حفظ دور هذه الجمعة", type="primary", use_container_width=True, key="btn_save_cl"):
-                    # جلب القيم مباشرة وبأمان تام من الـ Session State المرتبط بالتواريخ
                     fri_str_0 = rotation[0]["fri_str"]
                     fri_str_1 = rotation[1]["fri_str"] if len(rotation) > 1 else fri_str_0
 
+                    # جلب القيم المختارة حالياً من قبل المستخدم بالـ Session State بشكل مباشر ومضمون
                     _sec     = st.session_state.get(f"cl_sec_{fri_str_0}", "")
                     _fir     = st.session_state.get(f"cl_fir_{fri_str_0}", "")
                     _nxt_sec = st.session_state.get(f"cl_sec_{fri_str_1}", "")
@@ -592,17 +604,16 @@ with tab4:
                     if not _sec or not _fir:
                         st.warning("⚠️ الاختيارات فارغة.")
                     elif _sec == _fir:
-                        st.warning("⚠️ الصف الأول: يجب أن يكون الشخصان مختلفَين.")
-                    elif _nxt_sec == _nxt_fir and _nxt_sec:
-                        st.warning("⚠️ الصف الثاني: يجب أن يكون الشخصان مختلفَين.")
+                        st.warning("⚠️ الجمعة الحالية: يجب أن يكون الشخص الثاني مختلفاً عن الأول.")
                     else:
                         if not _nxt_sec: _nxt_sec = _sec
                         if not _nxt_fir: _nxt_fir = _fir
+                        
                         cleaner_str  = f"{_sec}، {_fir}"
                         next_str     = f"{_nxt_sec}، {_nxt_fir}"
                         fri_str_save = next_fri_date.strftime("%d/%m/%Y")
                         
-                        with st.spinner("جاري الحفظ…"):
+                        with st.spinner("جاري الحفظ وإرسال التحديث لـ Google Sheets..."):
                             res = api({
                                 "action":   "addCleaningEntry",
                                 "cleaner":  cleaner_str,
@@ -614,11 +625,11 @@ with tab4:
                             })
                         if "Success" in res:
                             wa_cleaning(_sec, _fir, fri_str_save, _nxt_sec, _nxt_fir)
-                            st.success("✅ تم الحفظ بنجاح!")
+                            st.success(f"✅ تم الحفظ بنجاح! الدور الحالي: {_sec} و {_fir} | الدور القادم: {_nxt_sec} و {_nxt_fir}")
                             st.cache_data.clear()
                             st.rerun()
                         else:
-                            st.error("❌ خطأ: " + res)
+                            st.error("❌ خطأ أثناء الحفظ: " + res)
 
             # ── العودة من الإجازة ──
             st.markdown("---")
