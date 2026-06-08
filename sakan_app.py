@@ -53,16 +53,22 @@ def next_friday():
     return t + timedelta(days=d if d else 7)
 
 # ══════════════════════════════════════════════
-#  واتساب
+#  واتساب (تم تأمينه لمنع توقف التطبيق محلياً)
 # ══════════════════════════════════════════════
 def _wacfg():
-    try: return {"i":st.secrets["GREEN_API_INSTANCE"],"t":st.secrets["GREEN_API_TOKEN"],"c":st.secrets["GREEN_API_CHAT_ID"]}
-    except: return None
+    try: 
+        return {
+            "i": st.secrets.get("GREEN_API_INSTANCE"),
+            "t": st.secrets.get("GREEN_API_TOKEN"),
+            "c": st.secrets.get("GREEN_API_CHAT_ID")
+        }
+    except: 
+        return None
 
 def wa(msg):
     cfg = _wacfg()
-    if not cfg: return
-    try: requests.post("https://api.green-api.com/waInstance"+cfg["i"]+"/sendMessage/"+cfg["t"],
+    if not cfg or not cfg["i"] or not cfg["t"]: return
+    try: requests.post("https://api.green-api.com/waInstance"+str(cfg["i"])+"/sendMessage/"+str(cfg["t"]),
                        json={"chatId":cfg["c"],"message":msg},timeout=15)
     except: pass
 
@@ -503,7 +509,7 @@ with tab4:
     st.subheader("🏠 خدمات الشقة")
     sv1,sv2,sv3=st.tabs(["🧹 التنظيف","🔵 الأنبوبة","🚫 الإعفاءات"])
 
-    # ────── التنظيف (نسخة مصلحة ومستقرة تماماً) ──────
+    # ────── التنظيف (النسخة المصلحة والمستقرة تماماً لمنع الارتداد والتصفير) ──────
     with sv1:
         st.markdown("""<div class="info-box">
 🧹 <b>نظام الدوران:</b> كل جمعة شخصان — 🔵 أسبوعه الثاني + 🟢 أسبوعه الأول.<br>
@@ -539,14 +545,7 @@ with tab4:
             else:
                 next_fri_date = rotation[0]["fri"]
 
-                # ── تهيئة الحالة الثابتة والآمنة لمنع الارتداد عند الحفظ ──
-                if "_cl_rotation_initialized" not in st.session_state:
-                    for _i, _r in enumerate(rotation):
-                        st.session_state[f"row_s_{_i}"] = _r["p_sec"] if _r["p_sec"] in SHABAB else SHABAB[0]
-                        st.session_state[f"row_f_{_i}"] = _r["p_fir"] if _r["p_fir"] in SHABAB else (SHABAB[1] if len(SHABAB)>1 else SHABAB[0])
-                    st.session_state["_cl_rotation_initialized"] = True
-
-                # ── رسم عناصر القوائم المنسدلة ──
+                # ── رسم عناصر القوائم المنسدلة بمفاتيح فريدة مستقرة تعتمد على الـ Date ──
                 for i, r in enumerate(rotation):
                     is_cur  = r["is_cur"]
                     skipped = r["skipped"]
@@ -561,11 +560,15 @@ with tab4:
                         f'📅 الجمعة {r["fri_str"]}{ctag}</div>',
                         unsafe_allow_html=True)
 
+                    # تحديد الفهرس الافتراضي الآمن
+                    idx_sec = SHABAB.index(r["p_sec"]) if r["p_sec"] in SHABAB else 0
+                    idx_fir = SHABAB.index(r["p_fir"]) if r["p_fir"] in SHABAB else (1 if len(SHABAB)>1 else 0)
+
                     c1, c2 = st.columns(2)
                     with c1:
-                        st.selectbox("🔵 أسبوعه الثاني", options=SHABAB, key=f"row_s_{i}")
+                        st.selectbox("🔵 أسبوعه الثاني", options=SHABAB, index=idx_sec, key=f"cl_sec_{r['fri_str']}")
                     with c2:
-                        st.selectbox("🟢 أسبوعه الأول",  options=SHABAB, key=f"row_f_{i}")
+                        st.selectbox("🟢 أسبوعه الأول",  options=SHABAB, index=idx_fir, key=f"cl_fir_{r['fri_str']}")
 
                     if skipped:
                         st.markdown(
@@ -577,10 +580,14 @@ with tab4:
                 cl_note_val = st.text_input("ملاحظة (اختياري)", placeholder="مثال: تنظيف عميق", key="cl_note_inp")
 
                 if st.button("💾 حفظ دور هذه الجمعة", type="primary", use_container_width=True, key="btn_save_cl"):
-                    _sec     = st.session_state.get("row_s_0", "")
-                    _fir     = st.session_state.get("row_f_0", "")
-                    _nxt_sec = st.session_state.get("row_s_1", "")
-                    _nxt_fir = st.session_state.get("row_f_1", "")
+                    # جلب القيم مباشرة وبأمان تام من الـ Session State المرتبط بالتواريخ
+                    fri_str_0 = rotation[0]["fri_str"]
+                    fri_str_1 = rotation[1]["fri_str"] if len(rotation) > 1 else fri_str_0
+
+                    _sec     = st.session_state.get(f"cl_sec_{fri_str_0}", "")
+                    _fir     = st.session_state.get(f"cl_fir_{fri_str_0}", "")
+                    _nxt_sec = st.session_state.get(f"cl_sec_{fri_str_1}", "")
+                    _nxt_fir = st.session_state.get(f"cl_fir_{fri_str_1}", "")
 
                     if not _sec or not _fir:
                         st.warning("⚠️ الاختيارات فارغة.")
@@ -608,11 +615,7 @@ with tab4:
                         if "Success" in res:
                             wa_cleaning(_sec, _fir, fri_str_save, _nxt_sec, _nxt_fir)
                             st.success("✅ تم الحفظ بنجاح!")
-                            
-                            # تنظيف وإعادة كسر الكاش ليرتب الجدول من جديد بناء على الملف المحدث
                             st.cache_data.clear()
-                            if "_cl_rotation_initialized" in st.session_state:
-                                del st.session_state["_cl_rotation_initialized"]
                             st.rerun()
                         else:
                             st.error("❌ خطأ: " + res)
