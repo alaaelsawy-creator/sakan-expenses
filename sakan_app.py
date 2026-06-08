@@ -43,7 +43,7 @@ html,body,[class*="css"]{font-family:'Tajawal',sans-serif!important;direction:rt
 #  الثوابت
 # ══════════════════════════════════════════════
 SHEET_CSV = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT    = "https://script.google.com/macros/s/AKfycbxPsmytLQIo0GHas-PEpM0d33uStRYdMVKRfgU31V6wOTT3Q2k98hHGHHvncNx88b_o/exec"
+SCRIPT    = "https://script.google.com/macros/s/AKfycbyYmYVW5tBmBSuxMap6j1EBt_Tf6EboBmLuwzl3BJKRJM7-CvkbJoLOXidbHV2XqyYu/exec"
 MONTHS_AR = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
              "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
              "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
@@ -563,16 +563,30 @@ with tab4:
 
             # ══════════════════════════════════════════════
             # ══════════════════════════════════════════════
-            # جدول الدوران — يُحفظ في الـ Sheet مباشرة
+            # جدول الدوران
             # ══════════════════════════════════════════════
             st.markdown("### 🗓️ جدول الدوران – الجمع القادمة")
-            st.caption("🔵 أسبوعه الثاني  |  🟢 أسبوعه الأول  |  اضغط 💾 بجانب أي صف لحفظه")
+            st.caption("🔵 أسبوعه الثاني  |  🟢 أسبوعه الأول  |  عدّل ثم اضغط 💾 لحفظ هذا الصف")
 
             if not rotation:
                 st.info("لا يوجد جدول.")
             else:
-                next_fri_date = rotation[0]["fri"]
-                fri_str_save  = next_fri_date.strftime("%d/%m/%Y")
+                # ── ضبط session_state مرة واحدة من الـ Sheet ──
+                # المفتاح يتغير فقط عند تغيير nextPair في الـ Sheet
+                _np = (cl_log[0].get("nextPair","") if cl_log else "").strip()
+                _ikey = "gdinit_" + str(len(SHABAB)) + "_" + _np.replace(" ","").replace("،","")
+                if _ikey not in st.session_state:
+                    # امسح القديم
+                    for _k in list(st.session_state.keys()):
+                        if _k.startswith("gdinit_") or _k.startswith("gd_s_") or _k.startswith("gd_f_"):
+                            del st.session_state[_k]
+                    # اضبط من build_rotation
+                    for _i, _r in enumerate(rotation):
+                        _ss = _r["p_sec"] if _r["p_sec"] not in ("—","") and _r["p_sec"] in SHABAB else SHABAB[0]
+                        _sf = _r["p_fir"] if _r["p_fir"] not in ("—","") and _r["p_fir"] in SHABAB else (SHABAB[1] if len(SHABAB)>1 else SHABAB[0])
+                        st.session_state["gd_s_"+str(_i)] = _ss
+                        st.session_state["gd_f_"+str(_i)] = _sf
+                    st.session_state[_ikey] = True
 
                 for i, r in enumerate(rotation):
                     is_cur  = r["is_cur"]
@@ -581,10 +595,6 @@ with tab4:
                     bord = "2px solid #4ade80" if is_cur else "1px solid #2a2f45"
                     fcol = "#4ade80" if is_cur else "#8892b0"
                     ctag = "  ← 🧹 هذه الجمعة" if is_cur else ""
-
-                    # الاقتراح المحفوظ من الـ Sheet
-                    sug_s = r["p_sec"] if r["p_sec"] not in ("—","") and r["p_sec"] in SHABAB else SHABAB[0]
-                    sug_f = r["p_fir"] if r["p_fir"] not in ("—","") and r["p_fir"] in SHABAB else (SHABAB[1] if len(SHABAB)>1 else SHABAB[0])
 
                     st.markdown(
                         '<div style="background:'+bg+';border:'+bord+';border-radius:12px;'
@@ -595,19 +605,17 @@ with tab4:
 
                     col_s, col_f, col_btn = st.columns([5, 5, 2])
                     with col_s:
-                        val_s = st.selectbox("🔵 ثانيه", SHABAB,
-                            index=SHABAB.index(sug_s),
+                        # بدون index — يقرأ من session_state تلقائياً
+                        st.selectbox("🔵 ثانيه", SHABAB,
                             key="gd_s_"+str(i),
                             label_visibility="collapsed")
                     with col_f:
-                        val_f = st.selectbox("🟢 أوله", SHABAB,
-                            index=SHABAB.index(sug_f),
+                        st.selectbox("🟢 أوله", SHABAB,
                             key="gd_f_"+str(i),
                             label_visibility="collapsed")
                     with col_btn:
                         save_row = st.button("💾", key="gd_save_"+str(i),
-                                             help="حفظ هذا الصف",
-                                             use_container_width=True)
+                            help="حفظ هذا الصف", use_container_width=True)
 
                     if skipped:
                         st.markdown(
@@ -616,34 +624,43 @@ with tab4:
                     st.markdown('</div>', unsafe_allow_html=True)
 
                     if save_row:
-                        if val_s == val_f:
-                            st.warning("⚠️ الشخصان يجب أن يكونا مختلفَين.")
+                        _s = st.session_state.get("gd_s_"+str(i), "")
+                        _f = st.session_state.get("gd_f_"+str(i), "")
+                        if not _s or not _f:
+                            st.warning("⚠️ الاختيارات فارغة.")
+                        elif _s == _f:
+                            st.warning("⚠️ يجب أن يكون الشخصان مختلفَين.")
                         else:
-                            # الصف الذي يُحفظ هو هذا الصف
-                            # nextPair = الصف التالي في الجدول
-                            if i + 1 < len(rotation):
-                                nxt_s = rotation[i+1]["p_sec"] if rotation[i+1]["p_sec"] not in ("—","") and rotation[i+1]["p_sec"] in SHABAB else SHABAB[0]
-                                nxt_f = rotation[i+1]["p_fir"] if rotation[i+1]["p_fir"] not in ("—","") and rotation[i+1]["p_fir"] in SHABAB else (SHABAB[1] if len(SHABAB)>1 else SHABAB[0])
+                            # nextPair = الصف التالي
+                            if i+1 < len(rotation):
+                                _ns = st.session_state.get("gd_s_"+str(i+1), rotation[i+1]["p_sec"])
+                                _nf = st.session_state.get("gd_f_"+str(i+1), rotation[i+1]["p_fir"])
+                                if not _ns or _ns=="—": _ns=_s
+                                if not _nf or _nf=="—": _nf=_f
                             else:
-                                nxt_s = val_s; nxt_f = val_f
-
-                            fri_this = r["fri"].strftime("%d/%m/%Y")
+                                _ns=_s; _nf=_f
+                            _fri = r["fri"].strftime("%d/%m/%Y")
                             with st.spinner("حفظ…"):
                                 res = api({
                                     "action":   "addCleaningEntry",
-                                    "cleaner":  val_s+"، "+val_f,
+                                    "cleaner":  _s+"، "+_f,
                                     "weekFrom": str(r["fri"]),
                                     "weekTo":   str(r["fri"]),
                                     "weekNum":  "1",
-                                    "nextPair": nxt_s+"، "+nxt_f,
+                                    "nextPair": _ns+"، "+_nf,
                                     "note":     "",
                                 })
                             if "Success" in res:
-                                wa_cleaning(val_s, val_f, fri_this, nxt_s, nxt_f)
-                                st.success("✅ تم حفظ: 🔵"+val_s+" + 🟢"+val_f)
+                                wa_cleaning(_s,_f,_fri,_ns,_nf)
+                                st.success("✅ تم! 🔵"+_s+" + 🟢"+_f+" | القادم: 🔵"+_ns+" + 🟢"+_nf)
+                                # مسح init حتى يُعاد تحميل الجدول من الـ Sheet
+                                for _k in list(st.session_state.keys()):
+                                    if _k.startswith("gdinit_") or _k.startswith("gd_s_") or _k.startswith("gd_f_"):
+                                        del st.session_state[_k]
                                 clr(); st.rerun()
                             else:
-                                st.error("❌ خطأ: "+res)
+                                st.error("❌ خطأ: "+res+
+                                    "\n\n💡 تأكد أن Apps Script مضبوط على: Who has access = Anyone")
 
             # ── العودة من الإجازة ──
             st.markdown("---")
