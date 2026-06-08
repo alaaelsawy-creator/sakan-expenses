@@ -563,10 +563,10 @@ with tab4:
 
             # ══════════════════════════════════════════════
             # ══════════════════════════════════════════════
-            # جدول الدوران التفاعلي — كل الأسابيع داخل نموذج واحد
+            # جدول الدوران — يُحفظ في الـ Sheet مباشرة
             # ══════════════════════════════════════════════
             st.markdown("### 🗓️ جدول الدوران – الجمع القادمة")
-            st.caption("🔵 = أسبوعه الثاني  |  🟢 = أسبوعه الأول  |  عدّل أي اختيار ثم اضغط حفظ في الأسفل")
+            st.caption("🔵 أسبوعه الثاني  |  🟢 أسبوعه الأول  |  اضغط 💾 بجانب أي صف لحفظه")
 
             if not rotation:
                 st.info("لا يوجد جدول.")
@@ -574,94 +574,76 @@ with tab4:
                 next_fri_date = rotation[0]["fri"]
                 fri_str_save  = next_fri_date.strftime("%d/%m/%Y")
 
-                # كل الصفوف داخل نموذج واحد — لا rerun عند كل اختيار
-                with st.form(key="form_all_weeks"):
-                    for i, r in enumerate(rotation):
-                        is_cur  = r["is_cur"]
-                        skipped = r["skipped"]
-                        bg   = "#0a1f14" if is_cur else "#141824"
-                        bord = "2px solid #4ade80" if is_cur else "1px solid #2a2f45"
-                        fcol = "#4ade80" if is_cur else "#8892b0"
-                        ctag = "  ← 🧹 هذه الجمعة" if is_cur else ""
+                for i, r in enumerate(rotation):
+                    is_cur  = r["is_cur"]
+                    skipped = r["skipped"]
+                    bg   = "#0a1f14" if is_cur else "#141824"
+                    bord = "2px solid #4ade80" if is_cur else "1px solid #2a2f45"
+                    fcol = "#4ade80" if is_cur else "#8892b0"
+                    ctag = "  ← 🧹 هذه الجمعة" if is_cur else ""
 
-                        # الاقتراح من build_rotation
-                        sug_s = r["p_sec"] if r["p_sec"] not in ("—","") and r["p_sec"] in SHABAB else (SHABAB[0] if SHABAB else "")
-                        sug_f = r["p_fir"] if r["p_fir"] not in ("—","") and r["p_fir"] in SHABAB else (SHABAB[1] if len(SHABAB)>1 else "")
-                        idx_s = SHABAB.index(sug_s) if sug_s in SHABAB else 0
-                        idx_f = SHABAB.index(sug_f) if sug_f in SHABAB else (1 if len(SHABAB)>1 else 0)
+                    # الاقتراح المحفوظ من الـ Sheet
+                    sug_s = r["p_sec"] if r["p_sec"] not in ("—","") and r["p_sec"] in SHABAB else SHABAB[0]
+                    sug_f = r["p_fir"] if r["p_fir"] not in ("—","") and r["p_fir"] in SHABAB else (SHABAB[1] if len(SHABAB)>1 else SHABAB[0])
 
-                        # رأس الصف
-                        skip_line = ""
-                        if skipped:
-                            skip_line = "  ⏭️ " + "، ".join(skipped)
+                    st.markdown(
+                        '<div style="background:'+bg+';border:'+bord+';border-radius:12px;'
+                        'padding:10px 14px;margin-bottom:6px;">'
+                        '<div style="color:'+fcol+';font-weight:700;font-size:.88rem;margin-bottom:6px;">'
+                        '📅 الجمعة '+r["fri_str"]+ctag+'</div>',
+                        unsafe_allow_html=True)
 
+                    col_s, col_f, col_btn = st.columns([5, 5, 2])
+                    with col_s:
+                        val_s = st.selectbox("🔵 ثانيه", SHABAB,
+                            index=SHABAB.index(sug_s),
+                            key="gd_s_"+str(i),
+                            label_visibility="collapsed")
+                    with col_f:
+                        val_f = st.selectbox("🟢 أوله", SHABAB,
+                            index=SHABAB.index(sug_f),
+                            key="gd_f_"+str(i),
+                            label_visibility="collapsed")
+                    with col_btn:
+                        save_row = st.button("💾", key="gd_save_"+str(i),
+                                             help="حفظ هذا الصف",
+                                             use_container_width=True)
+
+                    if skipped:
                         st.markdown(
-                            '<div style="background:'+bg+';border:'+bord+';border-radius:12px;'
-                            'padding:10px 14px;margin-bottom:6px;">'
-                            '<div style="color:'+fcol+';font-weight:700;font-size:.88rem;margin-bottom:6px;">'
-                            '📅 الجمعة '+r["fri_str"]+ctag+
-                            ('<span style="color:#6b7280;font-size:.75rem;font-weight:400;">'+skip_line+'</span>' if skip_line else '')+
-                            '</div>',
-                            unsafe_allow_html=True)
+                            '<div style="color:#6b7280;font-size:.73rem;">⏭️ تخطي: '
+                            +"، ".join(skipped)+'</div>', unsafe_allow_html=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
 
-                        c1, c2 = st.columns(2)
-                        with c1:
-                            st.selectbox("🔵 أسبوعه الثاني", SHABAB,
-                                         index=idx_s, key="fw_s_"+str(i))
-                        with c2:
-                            st.selectbox("🟢 أسبوعه الأول", SHABAB,
-                                         index=idx_f, key="fw_f_"+str(i))
-
-                        st.markdown('</div>', unsafe_allow_html=True)
-
-                    st.markdown("---")
-                    note_val = st.text_input("ملاحظة (اختياري)",
-                                             placeholder="مثال: تنظيف عميق",
-                                             key="fw_note")
-                    submitted = st.form_submit_button(
-                        "💾 حفظ جميع الاختيارات",
-                        type="primary",
-                        use_container_width=True
-                    )
-
-                # معالجة الحفظ خارج الـ form
-                if submitted:
-                    # الصف الأول = هذه الجمعة
-                    _sec = st.session_state.get("fw_s_0", "")
-                    _fir = st.session_state.get("fw_f_0", "")
-                    # الصف الثاني = الجمعة القادمة (nextPair)
-                    _nxt_sec = st.session_state.get("fw_s_1", _sec)
-                    _nxt_fir = st.session_state.get("fw_f_1", _fir)
-
-                    if not _sec or not _fir:
-                        st.warning("⚠️ الاختيارات فارغة.")
-                    elif _sec == _fir:
-                        st.warning("⚠️ هذه الجمعة: الشخصان يجب أن يكونا مختلفَين.")
-                    elif _nxt_sec == _nxt_fir:
-                        st.warning("⚠️ الجمعة القادمة: الشخصان يجب أن يكونا مختلفَين.")
-                    else:
-                        cleaner_str = _sec + "، " + _fir
-                        next_str    = _nxt_sec + "، " + _nxt_fir
-                        with st.spinner("جاري الحفظ…"):
-                            res = api({
-                                "action":   "addCleaningEntry",
-                                "cleaner":  cleaner_str,
-                                "weekFrom": str(next_fri_date),
-                                "weekTo":   str(next_fri_date),
-                                "weekNum":  "1",
-                                "nextPair": next_str,
-                                "note":     st.session_state.get("fw_note",""),
-                            })
-                        if "Success" in res:
-                            wa_cleaning(_sec, _fir, fri_str_save, _nxt_sec, _nxt_fir)
-                            st.success(
-                                "✅ تم الحفظ!\n"
-                                "🧹 هذه الجمعة: 🔵 "+_sec+"  +  🟢 "+_fir+"\n"
-                                "🔜 القادمة: 🔵 "+_nxt_sec+"  +  🟢 "+_nxt_fir
-                            )
-                            clr(); st.rerun()
+                    if save_row:
+                        if val_s == val_f:
+                            st.warning("⚠️ الشخصان يجب أن يكونا مختلفَين.")
                         else:
-                            st.error("❌ خطأ: " + res)
+                            # الصف الذي يُحفظ هو هذا الصف
+                            # nextPair = الصف التالي في الجدول
+                            if i + 1 < len(rotation):
+                                nxt_s = rotation[i+1]["p_sec"] if rotation[i+1]["p_sec"] not in ("—","") and rotation[i+1]["p_sec"] in SHABAB else SHABAB[0]
+                                nxt_f = rotation[i+1]["p_fir"] if rotation[i+1]["p_fir"] not in ("—","") and rotation[i+1]["p_fir"] in SHABAB else (SHABAB[1] if len(SHABAB)>1 else SHABAB[0])
+                            else:
+                                nxt_s = val_s; nxt_f = val_f
+
+                            fri_this = r["fri"].strftime("%d/%m/%Y")
+                            with st.spinner("حفظ…"):
+                                res = api({
+                                    "action":   "addCleaningEntry",
+                                    "cleaner":  val_s+"، "+val_f,
+                                    "weekFrom": str(r["fri"]),
+                                    "weekTo":   str(r["fri"]),
+                                    "weekNum":  "1",
+                                    "nextPair": nxt_s+"، "+nxt_f,
+                                    "note":     "",
+                                })
+                            if "Success" in res:
+                                wa_cleaning(val_s, val_f, fri_this, nxt_s, nxt_f)
+                                st.success("✅ تم حفظ: 🔵"+val_s+" + 🟢"+val_f)
+                                clr(); st.rerun()
+                            else:
+                                st.error("❌ خطأ: "+res)
 
             # ── العودة من الإجازة ──
             st.markdown("---")
