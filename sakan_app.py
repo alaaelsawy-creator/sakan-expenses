@@ -321,18 +321,11 @@ if SHABAB:
     with _t1:
         _c  = nxt_cleaner or "—"
         _fd = next_friday().strftime("%d/%m/%Y")
-        # حساب القادم بعده
-        cl_active=[p for p in SHABAB if vac_month.get(p,{}).get("type")!="full" and p not in cl_ex]
-        if cl_active and nxt_cleaner in cl_active:
-            _nc = cl_active[(cl_active.index(nxt_cleaner)+1)%len(cl_active)]
-        else:
-            _nc = cl_active[0] if cl_active else "—"
         st.markdown(
             '<div style="background:linear-gradient(135deg,#0d3b2e,#1a4a38);border:2px solid #4ade80;'
             'border-radius:14px;padding:14px 18px;margin-bottom:10px;">'
             '<div style="color:#86efac;font-size:.78rem;">🧹 التنظيف – الجمعة '+_fd+'</div>'
             '<div style="color:#4ade80;font-size:1.4rem;font-weight:800;margin:3px 0;">'+_c+'</div>'
-            '<div style="color:#6ee7b7;font-size:.75rem;">🔜 القادم: '+_nc+'</div>'
             '</div>', unsafe_allow_html=True)
     with _t2:
         _g = nxt_gas or "—"
