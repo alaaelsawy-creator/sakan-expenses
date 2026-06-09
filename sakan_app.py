@@ -566,10 +566,10 @@ with tab4:
 
             # ══════════════════════════════════════════════
             # ══════════════════════════════════════════════
-            # جدول الدوران — st.form يمنع rerun عند الاختيار
+            # جدول الدوران
             # ══════════════════════════════════════════════
             st.markdown("### 🗓️ جدول الدوران – الجمع القادمة")
-            st.caption("🔵 أسبوعه الثاني  |  🟢 أسبوعه الأول  |  عدّل الاختيارات ثم اضغط حفظ في الأسفل")
+            st.caption("🔵 أسبوعه الثاني  |  🟢 أسبوعه الأول  |  عدّل ثم اضغط حفظ")
 
             if not rotation:
                 st.info("لا يوجد جدول.")
@@ -577,8 +577,23 @@ with tab4:
                 next_fri_date = rotation[0]["fri"]
                 fri_str_save  = next_fri_date.strftime("%d/%m/%Y")
 
+                # ── ضبط session_state مرة واحدة فقط عند تغيير nextPair ──
+                _np_saved = (cl_log[0].get("nextPair","") if cl_log else "").strip()
+                _ik = "roti_" + str(len(SHABAB)) + "_" + _np_saved.replace(" ","").replace("،","")
+
+                if _ik not in st.session_state:
+                    for k in list(st.session_state.keys()):
+                        if k.startswith("roti_") or k.startswith("rot_s_") or k.startswith("rot_f_"):
+                            del st.session_state[k]
+                    for idx, r in enumerate(rotation):
+                        ss = r["p_sec"] if r["p_sec"] not in ("—","") and r["p_sec"] in SHABAB else SHABAB[0]
+                        sf = r["p_fir"] if r["p_fir"] not in ("—","") and r["p_fir"] in SHABAB else (SHABAB[1] if len(SHABAB)>1 else SHABAB[0])
+                        st.session_state["rot_s_"+str(idx)] = ss
+                        st.session_state["rot_f_"+str(idx)] = sf
+                    st.session_state[_ik] = True
+
+                # ── رسم الجدول داخل form ──
                 with st.form("rotation_form"):
-                    rows_data = []
                     for i, r in enumerate(rotation):
                         is_cur  = r["is_cur"]
                         skipped = r["skipped"]
@@ -586,9 +601,6 @@ with tab4:
                         bord = "2px solid #4ade80" if is_cur else "1px solid #2a2f45"
                         fcol = "#4ade80" if is_cur else "#8892b0"
                         ctag = "  ← 🧹 هذه الجمعة" if is_cur else ""
-
-                        sug_s = r["p_sec"] if r["p_sec"] not in ("—","") and r["p_sec"] in SHABAB else SHABAB[0]
-                        sug_f = r["p_fir"] if r["p_fir"] not in ("—","") and r["p_fir"] in SHABAB else (SHABAB[1] if len(SHABAB)>1 else SHABAB[0])
 
                         st.markdown(
                             '<div style="background:'+bg+';border:'+bord+';border-radius:12px;'
@@ -599,29 +611,20 @@ with tab4:
 
                         c1, c2 = st.columns(2)
                         with c1:
-                            sel_s = st.selectbox(
-                                "🔵 ثانيه",
-                                options=SHABAB,
-                                index=SHABAB.index(sug_s),
+                            # بدون index — يقرأ من session_state المضبوط أعلاه
+                            st.selectbox("🔵 ثانيه", SHABAB,
                                 key="rot_s_"+str(i),
-                                label_visibility="visible"
-                            )
+                                label_visibility="visible")
                         with c2:
-                            sel_f = st.selectbox(
-                                "🟢 أوله",
-                                options=SHABAB,
-                                index=SHABAB.index(sug_f),
+                            st.selectbox("🟢 أوله", SHABAB,
                                 key="rot_f_"+str(i),
-                                label_visibility="visible"
-                            )
+                                label_visibility="visible")
 
                         if skipped:
                             st.markdown(
                                 '<div style="color:#6b7280;font-size:.73rem;">⏭️ تخطي: '
                                 +"، ".join(skipped)+'</div>', unsafe_allow_html=True)
                         st.markdown('</div>', unsafe_allow_html=True)
-
-                        rows_data.append((i, r, sel_s, sel_f))
 
                     st.markdown("---")
                     save_all = st.form_submit_button(
@@ -631,21 +634,18 @@ with tab4:
                     )
 
                 if save_all:
-                    errors = []
-                    for (i, r, sel_s, sel_f) in rows_data:
-                        if sel_s == sel_f:
-                            errors.append(f"الجمعة {r['fri_str']}: الشخصان متطابقان")
-                    if errors:
-                        for e in errors:
-                            st.warning("⚠️ "+e)
-                    else:
-                        # الصف 0 = هذه الجمعة (cleaner)
-                        # الصف 1 = nextPair
-                        _sec = rows_data[0][2] if rows_data else ""
-                        _fir = rows_data[0][3] if rows_data else ""
-                        _nxt_sec = rows_data[1][2] if len(rows_data)>1 else _sec
-                        _nxt_fir = rows_data[1][3] if len(rows_data)>1 else _fir
+                    _sec     = st.session_state.get("rot_s_0","")
+                    _fir     = st.session_state.get("rot_f_0","")
+                    _nxt_sec = st.session_state.get("rot_s_1", _sec)
+                    _nxt_fir = st.session_state.get("rot_f_1", _fir)
 
+                    if not _sec or not _fir:
+                        st.warning("⚠️ الاختيارات فارغة.")
+                    elif _sec == _fir:
+                        st.warning("⚠️ هذه الجمعة: الشخصان يجب أن يكونا مختلفَين.")
+                    elif _nxt_sec == _nxt_fir:
+                        st.warning("⚠️ الجمعة القادمة: الشخصان يجب أن يكونا مختلفَين.")
+                    else:
                         with st.spinner("جاري الحفظ…"):
                             res = api({
                                 "action":   "addCleaningEntry",
@@ -663,6 +663,9 @@ with tab4:
                                 "🧹 هذه الجمعة: 🔵 "+_sec+"  +  🟢 "+_fir+"\n"
                                 "🔜 القادمة: 🔵 "+_nxt_sec+"  +  🟢 "+_nxt_fir
                             )
+                            for k in list(st.session_state.keys()):
+                                if k.startswith("roti_") or k.startswith("rot_s_") or k.startswith("rot_f_"):
+                                    del st.session_state[k]
                             clr(); st.rerun()
                         else:
                             st.error("❌ خطأ: "+res)
