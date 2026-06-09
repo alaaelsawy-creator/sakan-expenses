@@ -43,7 +43,7 @@ html,body,[class*="css"]{font-family:'Tajawal',sans-serif!important;direction:rt
 #  الثوابت
 # ══════════════════════════════════════════════
 SHEET_CSV = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT    = "https://script.google.com/macros/s/AKfycbwbM6-RvTMQM8ciEugek0nt_zYHvs5cCTs1BaFpTerVJEeQrTKl5dSZKc4Ntt2tmTQ/exec"
+SCRIPT    = "https://script.google.com/macros/s/AKfycbx5olQKpzyov_KXOjoWHeVfrd3rynMNPPV4bNm7Ej5iHDHd4wzqjOS3AyEn8Ej_BbTs/exec"
 MONTHS_AR = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
              "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
              "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
@@ -180,9 +180,9 @@ def get_next_cleaner(cl_log, persons, vac_month, cl_exempt):
     active=[p for p in persons if vac_month.get(p,{}).get("type")!="full" and p not in cl_exempt]
     if not active: return None
     if not cl_log: return active[0]
-    np=cl_log[0].get("nextPerson","")
+    np=cl_log[0].get("nextPerson","").strip()
     if np and np in active: return np
-    last=cl_log[0].get("cleaner","")
+    last=cl_log[0].get("cleaner","").strip()
     if last in active: return active[(active.index(last)+1)%len(active)]
     return active[0]
 
@@ -545,7 +545,7 @@ with tab4:
             st.markdown("### 📋 سجل التنظيف")
             if cl_log:
                 for entry in cl_log[:15]:
-                    np2 = entry.get("nextPerson","") or entry.get("nextPair","")
+                    np2 = entry.get("nextPerson","").strip()
                     np_b = ' | <span style="color:#93c5fd;">القادم: <b>'+np2+'</b></span>' if np2 else ""
                     st.markdown(
                         '<div style="background:#1a1e2e;border:1px solid #2a2f45;border-radius:10px;'
