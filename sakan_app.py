@@ -445,6 +445,11 @@ with tab1:
             nt=(" (إجازة)" if vt=="full" else f" (مصاريف {row['نسبة']*100:.0f}%)" if vt in("from_start","from_date") else " (خصم)" if vt=="deduct" else "")
             lines.append(f"• {row['الاسم']}{nt}: {st2} *{abs(b):.3f}*")
         st.markdown('<div class="whatsapp-box">'+"\n".join(lines)+'</div>',unsafe_allow_html=True)
+        # زر نسخ التقرير
+        report_text = "\n".join(lines)
+        st.code(report_text, language=None)
+        st.caption("⬆️ اضغط على أيقونة النسخ في الزاوية العلوية لنسخ التقرير")
+
 
 # ── ٢ إضافة مصروف ─────────────────────────────
 with tab2:
