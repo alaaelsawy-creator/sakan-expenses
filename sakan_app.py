@@ -74,9 +74,9 @@ def wa_del_expense(rid):                  wa("🏠 *تنظيم السكن*\n🗑
 def wa_vac(name,vt,month):
     vta={"full":"إجازة كاملة 🏖️","from_start":"غياب من البداية 🗓️","from_date":"إجازة من تاريخ 📅","deduct":"خصم مبلغ ➖","none":"إلغاء الإجازة ✅"}.get(vt,vt)
     wa("🏠 *تنظيم السكن*\n🏖️ تحديث إجازة\n👤 "+name+"  |  "+vta+"\n📅 "+month+"\n🕐 "+_now())
-def wa_cleaning(sec,fir,fri_str,nsec,nfir):
-    wa("🏠 *تنظيم السكن*\n🧹 تسجيل التنظيف\n🔵 "+sec+" (أسبوعه الثاني)\n🟢 "+fir+" (أسبوعه الأول)\n📅 الجمعة "+fri_str+"\n🔜 الدور القادم:\n   🔵 "+nsec+" (ثانيه)  +  🟢 "+nfir+" (أوله)\n🕐 "+_now())
-def wa_remind_cl(sec,fir,fri_str):        wa("🏠 *تنظيم السكن*\n🔔 تذكير التنظيف\n📅 الجمعة "+fri_str+"\n🔵 "+sec+" (أسبوعه الثاني)\n🟢 "+fir+" (أسبوعه الأول)\n🕐 "+_now())
+def wa_cleaning(cleaner,fri_str,nxt):
+    wa("🏠 *تنظيم السكن*\n🧹 تسجيل التنظيف\n👤 نظّف: *"+cleaner+"*\n📅 الجمعة "+fri_str+"\n🔜 الدور القادم: *"+nxt+"*\n🕐 "+_now())
+def wa_remind_cl(cleaner,fri_str):        wa("🏠 *تنظيم السكن*\n🔔 تذكير التنظيف\n📅 الجمعة "+fri_str+"\n👤 عليه الدور: *"+cleaner+"*\n🕐 "+_now())
 def wa_gas(filler,nxt):                   wa("🏠 *تنظيم السكن*\n🔵 ملء الأنبوبة\n👤 ملأ: *"+filler+"*\n🔜 الدور القادم: *"+nxt+"*\n🕐 "+_now())
 def wa_remind_gas(p):                     wa("🏠 *تنظيم السكن*\n🔔 تذكير الأنبوبة\n👤 عليه الدور: *"+p+"*\n🕐 "+_now())
 def wa_add_person(n):                     wa("🏠 *تنظيم السكن*\n👤 إضافة شخص: *"+n+"*\n🕐 "+_now())
@@ -176,92 +176,15 @@ def clr(): st.cache_data.clear()
 # ══════════════════════════════════════════════
 #  منطق التنظيف – مصدر حقيقة واحد
 # ══════════════════════════════════════════════
-def p_status(p, vac_month, cl_exempt):
-    if vac_month.get(p,{}).get("type")=="full": return "vacation"
-    if p in cl_exempt: return "exempt"
-    return "active"
-
-def p_avail(p, vac_month, cl_exempt):
-    return p_status(p,vac_month,cl_exempt)=="active"
-
-def next_avail_idx(persons, start, vac_month, cl_exempt, skip=None):
-    n=len(persons)
-    for off in range(n):
-        idx=(start+off)%n; p=persons[idx]
-        if p==skip: continue
-        if p_avail(p,vac_month,cl_exempt): return idx,p
-    return None,None
-
-def build_rotation(persons, vac_month, cl_exempt, cl_log, weeks=None):
-    """
-    يبني جدول الدوران.
-    الصف الأول (هذه الجمعة) يُقرأ مباشرة من nextPair المحفوظ في الـ Sheet
-    لضمان التطابق الكامل مع ما اختاره المستخدم.
-    الصفوف التالية تُحسب تلقائياً من الترتيب.
-    """
-    n=len(persons)
-    if not n: return []
-    if weeks is None: weeks=max(n,2)
-
-    # قراءة nextPair المحفوظ مباشرة
-    saved_np_sec = None
-    saved_np_fir = None
-    start_idx    = 0
-    if cl_log:
-        np_raw = (cl_log[0].get("nextPair","") or "").strip()
-        if np_raw:
-            parts = [x.strip() for x in np_raw.split("،") if x.strip()]
-            if len(parts) >= 1 and parts[0] in persons:
-                saved_np_sec = parts[0]
-                start_idx    = persons.index(parts[0])
-            if len(parts) >= 2 and parts[1] in persons:
-                saved_np_fir = parts[1]
-
-    fri0=next_friday(); rows=[]; cur=start_idx
-
-    for i in range(weeks):
-        fri=fri0+timedelta(weeks=i)
-
-        if i == 0 and saved_np_sec:
-            # الصف الأول: استخدم ما حفظه المستخدم بالضبط
-            ps = saved_np_sec
-            pf = saved_np_fir
-            si = persons.index(ps) if ps in persons else 0
-            sk = []
-            rows.append({
-                "fri":fri,"fri_str":fri.strftime("%d/%m/%Y"),
-                "p_sec":ps,"p_fir":pf or "—",
-                "sec_st":p_status(ps,vac_month,cl_exempt),
-                "fir_st":p_status(pf,vac_month,cl_exempt) if pf else "none",
-                "is_cur":True,"skipped":[]
-            })
-            cur=(si+1)%n
-        else:
-            # الصفوف التالية: احسب من الترتيب
-            si,ps=next_avail_idx(persons,cur,vac_month,cl_exempt)
-            if si is None:
-                rows.append({"fri":fri,"fri_str":fri.strftime("%d/%m/%Y"),
-                             "p_sec":"—","p_fir":"—","sec_st":"none","fir_st":"none",
-                             "is_cur":False,"skipped":[]})
-                continue
-            fi,pf=next_avail_idx(persons,(si+1)%n,vac_month,cl_exempt,skip=ps)
-            sk=[]
-            for off in range((si-cur)%n): sk.append(persons[(cur+off)%n])
-            if fi is not None:
-                ex=(si+1)%n
-                for off in range((fi-ex)%n):
-                    c=persons[(ex+off)%n]
-                    if c!=ps: sk.append(c)
-            rows.append({
-                "fri":fri,"fri_str":fri.strftime("%d/%m/%Y"),
-                "p_sec":ps,"p_fir":pf or "—",
-                "sec_st":p_status(ps,vac_month,cl_exempt),
-                "fir_st":p_status(pf,vac_month,cl_exempt) if pf else "none",
-                "is_cur":False,"skipped":list(dict.fromkeys(sk))
-            })
-            cur=(si+1)%n
-
-    return rows
+def get_next_cleaner(cl_log, persons, vac_month, cl_exempt):
+    active=[p for p in persons if vac_month.get(p,{}).get("type")!="full" and p not in cl_exempt]
+    if not active: return None
+    if not cl_log: return active[0]
+    np=cl_log[0].get("nextPerson","")
+    if np and np in active: return np
+    last=cl_log[0].get("cleaner","")
+    if last in active: return active[(active.index(last)+1)%len(active)]
+    return active[0]
 
 def get_next_gas(gas_log, persons, vac_month, gas_exempt):
     active=[p for p in persons if vac_month.get(p,{}).get("type")!="full" and p not in gas_exempt]
@@ -276,15 +199,13 @@ def get_next_gas(gas_log, persons, vac_month, gas_exempt):
 # ══════════════════════════════════════════════
 #  تذكيرات تلقائية (جمعة + يومين = ثلاثاء وخميس)
 # ══════════════════════════════════════════════
-def maybe_remind(rotation, next_gas):
+def maybe_remind(nxt_cleaner, next_gas):
     today=date.today(); ts=today.strftime("%Y-%m-%d"); wd=today.weekday()
-    # جمعة=4، ثلاثاء=1، خميس=3
     if wd not in (4,1,3): return
-    if rotation and st.session_state.get("last_cl_remind")!=ts:
-        r=rotation[0]
-        if r["p_sec"]!="—":
-            wa_remind_cl(r["p_sec"],r["p_fir"],r["fri_str"])
-            st.session_state["last_cl_remind"]=ts
+    fri_str=next_friday().strftime("%d/%m/%Y")
+    if nxt_cleaner and st.session_state.get("last_cl_remind")!=ts:
+        wa_remind_cl(nxt_cleaner,fri_str)
+        st.session_state["last_cl_remind"]=ts
     if next_gas and st.session_state.get("last_gas_remind")!=ts:
         wa_remind_gas(next_gas)
         st.session_state["last_gas_remind"]=ts
@@ -384,14 +305,13 @@ ac=sum(1 for p in SHABAB if er[p]>0)
 if not SHABAB: st.warning("⚠️ لا يوجد أشخاص.")
 
 # ══════════════════════════════════════════════
-#  بناء جدول التنظيف — المصدر الوحيد
+#  التنظيف والأنبوبة — المصدر الوحيد
 # ══════════════════════════════════════════════
-n_wks   = max(len(SHABAB),2)
-rotation= build_rotation(SHABAB, vac_month, cl_ex, cl_log, weeks=n_wks)
-nxt_gas = get_next_gas(gas_log, SHABAB, vac_month, gas_ex)
+nxt_cleaner = get_next_cleaner(cl_log, SHABAB, vac_month, cl_ex)
+nxt_gas     = get_next_gas(gas_log, SHABAB, vac_month, gas_ex)
 
 # تذكيرات تلقائية
-maybe_remind(rotation, nxt_gas)
+maybe_remind(nxt_cleaner, nxt_gas)
 
 # ══════════════════════════════════════════════
 #  بطاقات التنبيه العلوية
@@ -399,18 +319,20 @@ maybe_remind(rotation, nxt_gas)
 if SHABAB:
     _t1, _t2 = st.columns(2)
     with _t1:
-        _cs  = rotation[0]["p_sec"] if rotation else "—"
-        _cf  = rotation[0]["p_fir"] if rotation else "—"
-        _ns  = rotation[1]["p_sec"] if len(rotation)>1 else "—"
-        _nf  = rotation[1]["p_fir"] if len(rotation)>1 else "—"
-        _fd  = rotation[0]["fri_str"] if rotation else "—"
-        _fn  = rotation[1]["fri_str"] if len(rotation)>1 else "—"
+        _c  = nxt_cleaner or "—"
+        _fd = next_friday().strftime("%d/%m/%Y")
+        # حساب القادم بعده
+        cl_active=[p for p in SHABAB if vac_month.get(p,{}).get("type")!="full" and p not in cl_ex]
+        if cl_active and nxt_cleaner in cl_active:
+            _nc = cl_active[(cl_active.index(nxt_cleaner)+1)%len(cl_active)]
+        else:
+            _nc = cl_active[0] if cl_active else "—"
         st.markdown(
             '<div style="background:linear-gradient(135deg,#0d3b2e,#1a4a38);border:2px solid #4ade80;'
             'border-radius:14px;padding:14px 18px;margin-bottom:10px;">'
             '<div style="color:#86efac;font-size:.78rem;">🧹 التنظيف – الجمعة '+_fd+'</div>'
-            '<div style="color:#4ade80;font-size:1.05rem;font-weight:800;margin:3px 0;">🔵 '+_cs+'  +  🟢 '+_cf+'</div>'
-            '<div style="color:#6ee7b7;font-size:.75rem;">🔜 '+_fn+': 🔵 '+_ns+'  +  🟢 '+_nf+'</div>'
+            '<div style="color:#4ade80;font-size:1.4rem;font-weight:800;margin:3px 0;">'+_c+'</div>'
+            '<div style="color:#6ee7b7;font-size:.75rem;">🔜 القادم: '+_nc+'</div>'
             '</div>', unsafe_allow_html=True)
     with _t2:
         _g = nxt_gas or "—"
@@ -557,132 +479,83 @@ with tab4:
     # ────── التنظيف ──────
     with sv1:
         st.markdown("""<div class="info-box">
-🧹 <b>نظام التنظيف:</b> كل جمعة شخصان — 🔵 أسبوعه الثاني + 🟢 أسبوعه الأول.<br>
-من في إجازة كاملة أو معفى يُتخطى تلقائياً ويعود لدوره عند عودته.
+🧹 <b>نظام التنظيف:</b> الدور يدور على المتاحين كل جمعة — شخص واحد.
+من في إجازة كاملة أو معفى يُستثنى تلقائياً.
 </div>""", unsafe_allow_html=True)
 
         if not SHABAB:
             st.info("أضف أشخاصاً أولاً.")
         else:
-            # ── بيانات الدور الحالي والقادم ──
-            r0 = rotation[0] if rotation else {}
-            r1 = rotation[1] if len(rotation)>1 else {}
-            cur_sec = r0.get("p_sec","—"); cur_fir = r0.get("p_fir","—")
-            nxt_sec = r1.get("p_sec","—"); nxt_fir = r1.get("p_fir","—")
-            fri_cur = r0.get("fri_str","—"); fri_nxt = r1.get("fri_str","—")
+            fri_str_cl = next_friday().strftime("%d/%m/%Y")
+            cl_active  = [p for p in SHABAB if vac_month.get(p,{}).get("type")!="full" and p not in cl_ex]
 
-            # ── بطاقة هذه الجمعة ──
+            # ── بطاقة الدور الحالي ──
             st.markdown(
                 '<div style="background:linear-gradient(135deg,#0d3b2e,#1a4a38);border:2px solid #4ade80;'
-                'border-radius:16px;padding:18px;text-align:center;margin-bottom:12px;">'
-                '<div style="color:#86efac;font-size:.85rem;">🧹 دور التنظيف – الجمعة '+fri_cur+'</div>'
-                '<div style="color:#4ade80;font-size:1.6rem;font-weight:800;margin:6px 0;">'
-                '🔵 '+cur_sec+'  +  🟢 '+cur_fir+'</div>'
-                '<div style="color:#6ee7b7;font-size:.8rem;">🔵 = أسبوعه الثاني  |  🟢 = أسبوعه الأول</div>'
-                '</div>', unsafe_allow_html=True)
-
-            # ── بطاقة الجمعة القادمة ──
-            st.markdown(
-                '<div style="background:#1a1e2e;border:1px solid #4a5568;'
-                'border-radius:16px;padding:16px;text-align:center;margin-bottom:20px;">'
-                '<div style="color:#8892b0;font-size:.82rem;">🔜 الجمعة القادمة – '+fri_nxt+'</div>'
-                '<div style="color:#e0e6ff;font-size:1.3rem;font-weight:800;margin:4px 0;">'
-                '🔵 '+nxt_sec+'  +  🟢 '+nxt_fir+'</div>'
-                '</div>', unsafe_allow_html=True)
+                'border-radius:16px;padding:18px;text-align:center;margin-bottom:20px;">'
+                '<div style="color:#93c5fd;font-size:.85rem;">🧹 دور التنظيف – الجمعة '+fri_str_cl+'</div>'
+                '<div style="color:#4ade80;font-size:1.8rem;font-weight:800;margin:6px 0;">'+(nxt_cleaner or "—")+'</div>'
+                '</div>',unsafe_allow_html=True)
 
             # ── شبكة حالة الأشخاص ──
-            st.markdown("##### 👥 ترتيب الدوران")
-            gc = st.columns(min(len(SHABAB),4))
+            gcols_cl=st.columns(min(len(SHABAB),5))
             for i,p in enumerate(SHABAB):
-                st2   = p_status(p, vac_month, cl_ex)
-                fills = sum(1 for e in cl_log if p in (e.get("cleaner","") or ""))
-                is_now  = p in (cur_sec, cur_fir)
-                is_next = p in (nxt_sec, nxt_fir)
-                if st2=="vacation":  lb="🏖️ إجازة"; bc="#3b2a0d"; nc="#fbbf24"
-                elif st2=="exempt":  lb="🚫 معفى";  bc="#3b0d0d"; nc="#f87171"
-                elif is_now:         lb="🧹 الآن";  bc="#4ade80"; nc="#4ade80"
-                elif is_next:        lb="🔜 القادم";bc="#60a5fa"; nc="#60a5fa"
-                else:                lb=f"⏳ {fills}×";bc="#2a2f45";nc="#8892b0"
-                with gc[i%len(gc)]:
+                is_n=p==nxt_cleaner; is_v=vac_month.get(p,{}).get("type")=="full"; is_ex=p in cl_ex
+                fills=sum(1 for e in cl_log if e.get("cleaner","")==p)
+                if is_v:   sl="🏖️ إجازة"; bc="#3b2a0d"; nc="#8892b0"
+                elif is_ex: sl="🚫 معفى";  bc="#3b0d0d"; nc="#8892b0"
+                elif is_n:  sl="🧹 دوره";  bc="#4ade80"; nc="#4ade80"
+                else:       sl=f"⏳ {fills}×"; bc="#2a2f45"; nc="#8892b0"
+                with gcols_cl[i%len(gcols_cl)]:
                     st.markdown(
                         '<div style="background:#1a1e2e;border:1px solid '+bc+';border-radius:10px;'
                         'padding:10px;text-align:center;margin-bottom:8px;">'
                         '<div style="color:'+nc+';font-weight:700;font-size:.85rem;">'+p+'</div>'
-                        '<div style="color:#6b7280;font-size:.75rem;margin-top:3px;">'+lb+'</div>'
-                        '</div>', unsafe_allow_html=True)
+                        '<div style="color:#6b7280;font-size:.75rem;margin-top:4px;">'+sl+'</div></div>',unsafe_allow_html=True)
 
-            # ── نموذج التسجيل (st.form = لا rerun عند الاختيار) ──
-            st.markdown("### ✅ تسجيل دور هذه الجمعة")
-            with st.form("cl_form_reg"):
-                st.markdown("**📅 هذه الجمعة " + fri_cur + "**")
-                c1, c2 = st.columns(2)
-                with c1:
-                    sel_sec = st.selectbox("🔵 أسبوعه الثاني", SHABAB,
-                        index=SHABAB.index(cur_sec) if cur_sec in SHABAB else 0,
-                        key="clf_sec")
-                with c2:
-                    sel_fir = st.selectbox("🟢 أسبوعه الأول", SHABAB,
-                        index=SHABAB.index(cur_fir) if cur_fir in SHABAB else (1 if len(SHABAB)>1 else 0),
-                        key="clf_fir")
-                st.markdown("**🔜 الجمعة القادمة " + fri_nxt + "**")
-                n1, n2 = st.columns(2)
-                with n1:
-                    sel_nxt_sec = st.selectbox("🔵 أسبوعه الثاني", SHABAB,
-                        index=SHABAB.index(nxt_sec) if nxt_sec in SHABAB else 0,
-                        key="clf_nxt_sec")
-                with n2:
-                    sel_nxt_fir = st.selectbox("🟢 أسبوعه الأول", SHABAB,
-                        index=SHABAB.index(nxt_fir) if nxt_fir in SHABAB else (1 if len(SHABAB)>1 else 0),
-                        key="clf_nxt_fir")
-                cl_sub = st.form_submit_button("💾 حفظ", type="primary", use_container_width=True)
-
-            if cl_sub:
-                if sel_sec == sel_fir:
-                    st.warning("⚠️ هذه الجمعة: الشخصان يجب أن يكونا مختلفَين.")
-                elif sel_nxt_sec == sel_nxt_fir:
-                    st.warning("⚠️ الجمعة القادمة: الشخصان يجب أن يكونا مختلفَين.")
+            # ── تسجيل التنظيف ──
+            st.markdown("### ✅ تسجيل التنظيف")
+            c_opts = cl_active or SHABAB
+            ci = c_opts.index(nxt_cleaner) if nxt_cleaner in c_opts else 0
+            cfiller = st.radio("👤 من نظّف؟", c_opts, index=ci, horizontal=True, key="cl_fill", label_visibility="visible")
+            nc_opts = [p for p in c_opts if p!=cfiller] or c_opts
+            sug_nc  = c_opts[(c_opts.index(cfiller)+1)%len(c_opts)] if cfiller in c_opts else nc_opts[0]
+            ni_cl   = nc_opts.index(sug_nc) if sug_nc in nc_opts else 0
+            cnext   = st.radio("🔜 الدور القادم؟", nc_opts, index=ni_cl, horizontal=True, key="cl_next", label_visibility="visible")
+            if st.button("💾 حفظ", type="primary", use_container_width=True, key="save_cl"):
+                fri_obj = next_friday()
+                fri_s   = fri_obj.strftime("%d/%m/%Y")
+                res = api({
+                    "action":     "addCleaningEntry",
+                    "cleaner":    cfiller,
+                    "weekFrom":   str(fri_obj),
+                    "weekTo":     str(fri_obj),
+                    "weekNum":    "1",
+                    "nextPerson": cnext,
+                    "note":       "",
+                })
+                if "Success" in res:
+                    wa_cleaning(cfiller, fri_s, cnext)
+                    st.success("✅ تم! القادم: "+cnext)
+                    clr(); st.rerun()
                 else:
-                    fri_obj = r0.get("fri", next_friday())
-                    fri_s   = fri_obj.strftime("%d/%m/%Y") if hasattr(fri_obj,"strftime") else fri_cur
-                    with st.spinner("حفظ…"):
-                        res = api({
-                            "action":   "addCleaningEntry",
-                            "cleaner":  sel_sec+"، "+sel_fir,
-                            "weekFrom": str(fri_obj),
-                            "weekTo":   str(fri_obj),
-                            "weekNum":  "1",
-                            "nextPair": sel_nxt_sec+"، "+sel_nxt_fir,
-                            "note":     "",
-                        })
-                    if "Success" in res:
-                        wa_cleaning(sel_sec, sel_fir, fri_s, sel_nxt_sec, sel_nxt_fir)
-                        st.success(
-                            "✅ تم الحفظ!\n"
-                            "🧹 "+fri_s+": 🔵 "+sel_sec+"  +  🟢 "+sel_fir+"\n"
-                            "🔜 "+fri_nxt+": 🔵 "+sel_nxt_sec+"  +  🟢 "+sel_nxt_fir
-                        )
-                        clr(); st.rerun()
-                    else:
-                        st.error("❌ خطأ: "+res)
+                    st.error("خطأ: "+res)
 
             # ── سجل التنظيف ──
             st.markdown("### 📋 سجل التنظيف")
             if cl_log:
                 for entry in cl_log[:15]:
-                    np2  = entry.get("nextPair","")
-                    nt2  = " | "+entry.get("note","") if entry.get("note") else ""
+                    np2 = entry.get("nextPerson","") or entry.get("nextPair","")
                     np_b = ' | <span style="color:#93c5fd;">القادم: <b>'+np2+'</b></span>' if np2 else ""
                     st.markdown(
                         '<div style="background:#1a1e2e;border:1px solid #2a2f45;border-radius:10px;'
                         'padding:11px 16px;margin-bottom:7px;direction:rtl;">'
                         '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">'
                         '<span style="color:#4ade80;font-weight:700;">🧹 '+entry.get("cleaner","")+'</span>'
-                        '<span style="color:#8892b0;font-size:.82rem;">📅 '+entry.get("weekFrom","")+nt2+np_b+'</span>'
+                        '<span style="color:#8892b0;font-size:.82rem;">📅 '+str(entry.get("weekFrom",""))[:10]+np_b+'</span>'
                         '</div></div>', unsafe_allow_html=True)
             else:
                 st.info("لا يوجد سجل.")
-
-            # ── العودة من الإجازة ──
     with sv2:
         st.markdown("""<div class="info-box">🔵 <b>نظام الأنبوبة:</b> الدور يدور على المتاحين.
 من في إجازة أو معفى يُستثنى تلقائياً.</div>""",unsafe_allow_html=True)
