@@ -43,7 +43,7 @@ html,body,[class*="css"]{font-family:'Tajawal',sans-serif!important;direction:rt
 #  الثوابت
 # ══════════════════════════════════════════════
 SHEET_CSV = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT    = "https://script.google.com/macros/s/AKfycbwIdfs1HkCdlB8qA4VJn2JrcL800c9MoUbDSmywaCdIl3yPckqrIFNokAnYInGKK74D/exec"
+SCRIPT    = "https://script.google.com/macros/s/AKfycbwyccE3p1hT9zfBrbEuyRjb1SiNVHZfHRYyDm737rMiJCy95nKT9C2638Hbji_X5ofR/exec"
 MONTHS_AR = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
              "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
              "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
@@ -196,19 +196,6 @@ def get_next_gas(gas_log, persons, vac_month, gas_exempt):
     if last in active: return active[(active.index(last)+1)%len(active)]
     return active[0]
 
-# ══════════════════════════════════════════════
-#  تذكيرات تلقائية (جمعة + يومين = ثلاثاء وخميس)
-# ══════════════════════════════════════════════
-def maybe_remind(nxt_cleaner, next_gas):
-    today=date.today(); ts=today.strftime("%Y-%m-%d"); wd=today.weekday()
-    if wd not in (4,1,3): return
-    fri_str=next_friday().strftime("%d/%m/%Y")
-    if nxt_cleaner and st.session_state.get("last_cl_remind")!=ts:
-        wa_remind_cl(nxt_cleaner,fri_str)
-        st.session_state["last_cl_remind"]=ts
-    if next_gas and st.session_state.get("last_gas_remind")!=ts:
-        wa_remind_gas(next_gas)
-        st.session_state["last_gas_remind"]=ts
 
 # ══════════════════════════════════════════════
 #  العنوان
@@ -310,8 +297,6 @@ if not SHABAB: st.warning("⚠️ لا يوجد أشخاص.")
 nxt_cleaner = get_next_cleaner(cl_log, SHABAB, vac_month, cl_ex)
 nxt_gas     = get_next_gas(gas_log, SHABAB, vac_month, gas_ex)
 
-# تذكيرات تلقائية
-maybe_remind(nxt_cleaner, nxt_gas)
 
 # ══════════════════════════════════════════════
 #  بطاقات التنبيه العلوية
