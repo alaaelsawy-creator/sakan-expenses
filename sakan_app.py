@@ -43,7 +43,7 @@ html,body,[class*="css"]{font-family:'Tajawal',sans-serif!important;direction:rt
 #  الثوابت
 # ══════════════════════════════════════════════
 SHEET_CSV = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT    = "https://script.google.com/macros/s/AKfycbwyccE3p1hT9zfBrbEuyRjb1SiNVHZfHRYyDm737rMiJCy95nKT9C2638Hbji_X5ofR/exec"
+SCRIPT    = "https://script.google.com/macros/s/AKfycbzYUMBCi2yfvfi0igAQWkNVZWz8XAbbOl8L13Fz2o5swsGxLvItaX64wHDYsR50VX7T/exec"
 MONTHS_AR = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
              "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
              "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
@@ -72,7 +72,7 @@ def wa_add_expense(name,amt,note,month):  wa("🏠 *تنظيم السكن*\n➕ 
 def wa_edit_expense(amt,note):            wa("🏠 *تنظيم السكن*\n✏️ تعديل مصروف\n💰 "+str(round(float(amt),3))+"  |  📝 "+note+"\n🕐 "+_now())
 def wa_del_expense(rid):                  wa("🏠 *تنظيم السكن*\n🗑️ حذف مصروف\n🔑 "+rid+"\n🕐 "+_now())
 def wa_vac(name,vt,month):
-    vta={"full":"إجازة كاملة 🏖️","from_start":"غياب من البداية 🗓️","from_date":"إجازة من تاريخ 📅","deduct":"خصم مبلغ ➖","none":"إلغاء الإجازة ✅"}.get(vt,vt)
+    vta={"full":"إجازة كاملة 🏖️","from_start":"غياب من البداية 🗓️","from_date":"إجازة من تاريخ 📅","deduct":"خصم مبلغ ➖","fixed":"مبلغ ثابت للمصاريف 💰","none":"إلغاء الإجازة ✅"}.get(vt,vt)
     wa("🏠 *تنظيم السكن*\n🏖️ تحديث إجازة\n👤 "+name+"  |  "+vta+"\n📅 "+month+"\n🕐 "+_now())
 def wa_cleaning(cleaner,fri_str,nxt):
     wa("🏠 *تنظيم السكن*\n🧹 تسجيل التنظيف\n👤 نظّف: *"+cleaner+"*\n📅 الجمعة "+fri_str+"\n🔜 الدور القادم: *"+nxt+"*\n🕐 "+_now())
@@ -125,6 +125,8 @@ def load_vac_sheet():
             if row.get("days"):      e["days"]=int(row["days"])
             if row.get("vacDate"):   e["date"]=_pd(row["vacDate"])
             if row.get("deductAmt"): e["deduct_amount"]=float(row["deductAmt"])
+            if row.get("fixedAmt"):  e["fixed_amount"]=float(row["fixedAmt"])
+            if row.get("note"):      e["note"]=str(row["note"])
             r[m][n]=e
         return r
     except: return {}
@@ -259,6 +261,7 @@ vac_month=vac_all.get(sel_month_ar,{})
 def exp_ratio(vi,dim,sy,sm):
     vt=vi.get("type","none")
     if vt=="full": return 0.0
+    if vt=="fixed": return 0.0
     if vt=="from_start": return max(0.0,(dim-min(int(vi.get("days",0)),dim))/dim)
     if vt=="from_date":
         vd=vi.get("date")
@@ -270,17 +273,22 @@ def exp_ratio(vi,dim,sy,sm):
 _raw=all_data[all_data["الشهر"]==sel_month_ar] if not all_data.empty else pd.DataFrame()
 mdf=_raw[pd.to_numeric(_raw["المبلغ"],errors='coerce').fillna(0)>0].copy() if not _raw.empty else pd.DataFrame()
 tot_exp=pd.to_numeric(mdf["المبلغ"],errors='coerce').sum() if not mdf.empty else 0.0
-er={}; dm={}; tr=0.0
+er={}; dm={}; fm={}; tr=0.0
 for p in SHABAB:
     v=vac_month.get(p,{}); r=exp_ratio(v,dim,sel_y,sel_m)
-    er[p]=r; tr+=r; dm[p]=float(v.get("deduct_amount",0)) if v.get("type")=="deduct" else 0.0
+    er[p]=r; tr+=r
+    dm[p]=float(v.get("deduct_amount",0)) if v.get("type")=="deduct" else 0.0
+    fm[p]=float(v.get("fixed_amount",0)) if v.get("type")=="fixed" else 0.0
+total_fixed=sum(fm.values())
+distributable=max(0.0,tot_exp-total_fixed)
 rpp=total_rent/len(SHABAB) if SHABAB else 0.0
 
 def exp_share(p):
-    if tr==0: return 0.0
     v=vac_month.get(p,{})
-    if v.get("type")=="deduct": return max(0.0,(er[p]/tr)*tot_exp-dm[p])
-    return (er[p]/tr)*tot_exp
+    if v.get("type")=="fixed": return fm[p]
+    if tr==0: return 0.0
+    if v.get("type")=="deduct": return max(0.0,(er[p]/tr)*distributable-dm[p])
+    return (er[p]/tr)*distributable
 
 summary=[]
 for p in SHABAB:
@@ -344,7 +352,7 @@ with tab1:
             b=row["رصيد"]; vt=row["إجازة"]
             if vt and vt!="none":
                 vl={"full":"🏖️ إجازة كاملة","from_start":f"🗓️ مصاريف {row['نسبة']*100:.0f}%",
-                    "from_date":f"📅 مصاريف {row['نسبة']*100:.0f}%","deduct":"➖ خصم"}.get(vt,"")
+                    "from_date":f"📅 مصاريف {row['نسبة']*100:.0f}%","deduct":"➖ خصم","fixed":"💰 مبلغ ثابت"}.get(vt,"")
                 bg=f'<span class="badge-vacation">{vl} + إيجار كامل</span>'
             elif abs(b)<0.01: bg='<span class="badge-zero">➖ صفر</span>'
             elif b>0:         bg=f'<span class="badge-green">🟢 له {b:.3f}</span>'
@@ -358,7 +366,7 @@ with tab1:
         for row in summary:
             b=row["رصيد"]; vt=row["إجازة"]
             st2="له 🟢" if b>0 else ("عليه 🔴" if b<0 else "صفر ➖")
-            nt=(" (إجازة)" if vt=="full" else f" (مصاريف {row['نسبة']*100:.0f}%)" if vt in("from_start","from_date") else " (خصم)" if vt=="deduct" else "")
+            nt=(" (إجازة)" if vt=="full" else f" (مصاريف {row['نسبة']*100:.0f}%)" if vt in("from_start","from_date") else " (خصم)" if vt=="deduct" else " (مبلغ ثابت)" if vt=="fixed" else "")
             lines.append(f"• {row['الاسم']}{nt}: {st2} *{abs(b):.3f}*")
         report_text = "\n".join(lines)
         st.markdown('<div class="whatsapp-box">'+report_text+'</div>',unsafe_allow_html=True)
@@ -624,17 +632,18 @@ with tab5:
         st.subheader(f"🏖️ إدارة الإجازات – {sel_month_ar}")
         st.markdown("""<div class="info-box">💡 <b>الإجازة تؤثر على المصاريف فقط.</b> الإيجار ثابت.<br>
 • <b>إجازة كاملة</b>: بدون مصاريف + إعفاء تلقائي من التنظيف والأنبوبة.<br>
-• <b>غياب من أول الشهر / من تاريخ / خصم مبلغ</b>: يشارك في الإيجار.
+• <b>غياب من أول الشهر / من تاريخ / خصم مبلغ</b>: يشارك في الإيجار.<br>
+• <b>مبلغ ثابت للمصاريف</b>: يدفع الإيجار كاملاً + مبلغ ثابت تحدده كنصيبه الكامل من المصاريف (بدل الحساب النسبي).
 </div>""",unsafe_allow_html=True)
         for p in SHABAB:
             with st.expander("⚙️ "+p,expanded=False):
                 v=vac_month.get(p,{})
                 vt=st.radio("نوع الإجازة",
-                    options=["none","full","from_start","from_date","deduct"],
+                    options=["none","full","from_start","from_date","deduct","fixed"],
                     format_func=lambda x:{"none":"✅ لا توجد إجازة","full":"🏖️ إجازة كاملة",
                         "from_start":"🗓️ غياب من أول الشهر","from_date":"📅 إجازة من تاريخ",
-                        "deduct":"➖ خصم مبلغ ثابت"}[x],
-                    index=["none","full","from_start","from_date","deduct"].index(v.get("type","none")),
+                        "deduct":"➖ خصم مبلغ ثابت","fixed":"💰 مبلغ ثابت للمصاريف"}[x],
+                    index=["none","full","from_start","from_date","deduct","fixed"].index(v.get("type","none")),
                     key="vt_"+p)
                 ex={}
                 if vt=="from_start":
@@ -649,11 +658,19 @@ with tab5:
                 elif vt=="deduct":
                     ded=st.number_input("المبلغ المخصوم",0.0,step=0.5,format="%.3f",value=float(v.get("deduct_amount",0.0)),key="vded_"+p)
                     st.info(f"خصم {ded:.3f}"); ex["deduct_amount"]=ded
+                elif vt=="fixed":
+                    fix=st.number_input("المبلغ الثابت (نصيبه الكامل من المصاريف)",0.0,step=0.5,format="%.3f",value=float(v.get("fixed_amount",0.0)),key="vfix_"+p)
+                    st.info(f"يدفع الإيجار كاملاً + {fix:.3f} كنصيب ثابت من المصاريف"); ex["fixed_amount"]=fix
                 elif vt=="full": st.info("لا مصاريف | معفى من الخدمات ✅")
+                if vt!="none":
+                    note=st.text_input("📝 ملاحظة",value=v.get("note",""),key="vnote_"+p)
+                    ex["note"]=note
                 if st.button("💾 حفظ "+p,key="sv_"+p):
                     with st.spinner("حفظ…"):
                         res=api({"action":"saveVacation","month":sel_month_ar,"name":p,"vtype":vt,
-                                 "days":ex.get("days",""),"vacDate":str(ex.get("date","")),"deductAmt":ex.get("deduct_amount","")})
+                                 "days":ex.get("days",""),"vacDate":str(ex.get("date","")),
+                                 "deductAmt":ex.get("deduct_amount",""),"fixedAmt":ex.get("fixed_amount",""),
+                                 "note":ex.get("note","")})
                     if "Success" in res:
                         wa_vac(p,vt,sel_month_ar); st.success("✅"); clr(); st.rerun()
                     else: st.error(res)
@@ -662,7 +679,9 @@ with tab5:
             for p,v in vac_month.items():
                 vt=v.get("type","")
                 desc={"full":"إجازة كاملة (+ إعفاء خدمات)","from_start":f"غياب {v.get('days',0)} يوم",
-                      "from_date":f"إجازة من {v.get('date','')}","deduct":f"خصم {v.get('deduct_amount',0):.3f}"}.get(vt,"")
+                      "from_date":f"إجازة من {v.get('date','')}","deduct":f"خصم {v.get('deduct_amount',0):.3f}",
+                      "fixed":f"إيجار كامل + مبلغ ثابت {v.get('fixed_amount',0):.3f} كنصيب من المصاريف"}.get(vt,"")
+                if v.get("note"): desc+=" | 📝 "+v["note"]
                 st.markdown(f'<div class="vacation-notice">🏖️ <strong>{p}</strong>: {desc}</div>',unsafe_allow_html=True)
 
 # ── ٦ إدارة الأشخاص ──────────────────────────
