@@ -43,7 +43,7 @@ html,body,[class*="css"]{font-family:'Tajawal',sans-serif!important;direction:rt
 #  الثوابت
 # ══════════════════════════════════════════════
 SHEET_CSV = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT    = "https://script.google.com/macros/s/AKfycbzYUMBCi2yfvfi0igAQWkNVZWz8XAbbOl8L13Fz2o5swsGxLvItaX64wHDYsR50VX7T/exec"
+SCRIPT    = "https://script.google.com/macros/s/AKfycby0BHb8u6OdzswDZHaPEtRl9jvUlpDtPVORaglqRYWoFSu5nSZ3uTtZrJb73nl8QQ/exec"
 MONTHS_AR = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
              "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
              "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
@@ -71,9 +71,13 @@ def _now(): return datetime.now().strftime("%Y-%m-%d %H:%M")
 def wa_add_expense(name,amt,note,month):  wa("🏠 *تنظيم السكن*\n➕ مصروف جديد\n👤 "+name+"  |  💰 "+str(round(float(amt),3))+"\n📝 "+note+"  |  📅 "+month+"\n🕐 "+_now())
 def wa_edit_expense(amt,note):            wa("🏠 *تنظيم السكن*\n✏️ تعديل مصروف\n💰 "+str(round(float(amt),3))+"  |  📝 "+note+"\n🕐 "+_now())
 def wa_del_expense(rid):                  wa("🏠 *تنظيم السكن*\n🗑️ حذف مصروف\n🔑 "+rid+"\n🕐 "+_now())
-def wa_vac(name,vt,month):
+def wa_vac(name,vt,month,vdate="",note=""):
     vta={"full":"إجازة كاملة 🏖️","from_start":"غياب من البداية 🗓️","from_date":"إجازة من تاريخ 📅","deduct":"خصم مبلغ ➖","fixed":"مبلغ ثابت للمصاريف 💰","none":"إلغاء الإجازة ✅"}.get(vt,vt)
-    wa("🏠 *تنظيم السكن*\n🏖️ تحديث إجازة\n👤 "+name+"  |  "+vta+"\n📅 "+month+"\n🕐 "+_now())
+    msg="🏠 *تنظيم السكن*\n🏖️ تحديث إجازة\n👤 "+name+"  |  "+vta+"\n📅 "+month
+    if vt=="from_date" and vdate: msg+="\n🗓️ التاريخ: "+vdate
+    if note: msg+="\n📝 "+note
+    msg+="\n🕐 "+_now()
+    wa(msg)
 def wa_cleaning(cleaner,fri_str,nxt):
     wa("🏠 *تنظيم السكن*\n🧹 تسجيل التنظيف\n👤 نظّف: *"+cleaner+"*\n📅 الجمعة "+fri_str+"\n🔜 الدور القادم: *"+nxt+"*\n🕐 "+_now())
 def wa_remind_cl(cleaner,fri_str):        wa("🏠 *تنظيم السكن*\n🔔 تذكير التنظيف\n📅 الجمعة "+fri_str+"\n👤 عليه الدور: *"+cleaner+"*\n🕐 "+_now())
@@ -123,7 +127,9 @@ def load_vac_sheet():
             if m not in r: r[m]={}
             e={"type":row["vtype"]}
             if row.get("days"):      e["days"]=int(row["days"])
-            if row.get("vacDate"):   e["date"]=_pd(row["vacDate"])
+            if row.get("vacDate"):
+                pdv=_pd(row["vacDate"])
+                if pdv: e["date"]=pdv
             if row.get("deductAmt"): e["deduct_amount"]=float(row["deductAmt"])
             if row.get("fixedAmt"):  e["fixed_amount"]=float(row["fixedAmt"])
             if row.get("note"):      e["note"]=str(row["note"])
@@ -132,8 +138,11 @@ def load_vac_sheet():
     except: return {}
 
 def _pd(v):
+    s=str(v).strip()
+    if not s or s=="None": return None
+    if "T" in s: s=s.split("T")[0]
     for f in ("%Y-%m-%d","%m/%d/%Y","%d/%m/%Y"):
-        try: return datetime.strptime(str(v),f).date()
+        try: return datetime.strptime(s,f).date()
         except: pass
     return None
 
@@ -672,7 +681,8 @@ with tab5:
                                  "deductAmt":ex.get("deduct_amount",""),"fixedAmt":ex.get("fixed_amount",""),
                                  "note":ex.get("note","")})
                     if "Success" in res:
-                        wa_vac(p,vt,sel_month_ar); st.success("✅"); clr(); st.rerun()
+                        vdate_str = ex.get("date","").strftime("%d/%m/%Y") if vt=="from_date" and ex.get("date") else ""
+                        wa_vac(p,vt,sel_month_ar,vdate_str,ex.get("note","")); st.success("✅"); clr(); st.rerun()
                     else: st.error(res)
         if vac_month:
             st.divider(); st.markdown("**📋 الإجازات المسجلة:**")
