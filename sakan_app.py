@@ -43,7 +43,7 @@ html,body,[class*="css"]{font-family:'Tajawal',sans-serif!important;direction:rt
 #  الثوابت
 # ══════════════════════════════════════════════
 SHEET_CSV = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT    = "https://script.google.com/macros/s/AKfycby0BHb8u6OdzswDZHaPEtRl9jvUlpDtPVORaglqRYWoFSu5nSZ3uTtZrJb73nl8QQ/exec"
+SCRIPT    = "https://script.google.com/macros/s/AKfycbx3drGo-kDhK7koUeZS88YJGZGgjdfkE6dRWaLGmvioanWMg_2t9tFxOA7qjqnFgucc/exec"
 MONTHS_AR = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
              "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
              "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
@@ -72,9 +72,9 @@ def wa_add_expense(name,amt,note,month):  wa("🏠 *تنظيم السكن*\n➕ 
 def wa_edit_expense(amt,note):            wa("🏠 *تنظيم السكن*\n✏️ تعديل مصروف\n💰 "+str(round(float(amt),3))+"  |  📝 "+note+"\n🕐 "+_now())
 def wa_del_expense(rid):                  wa("🏠 *تنظيم السكن*\n🗑️ حذف مصروف\n🔑 "+rid+"\n🕐 "+_now())
 def wa_vac(name,vt,month,vdate="",note=""):
-    vta={"full":"إجازة كاملة 🏖️","from_start":"غياب من البداية 🗓️","from_date":"إجازة من تاريخ 📅","deduct":"خصم مبلغ ➖","fixed":"مبلغ ثابت للمصاريف 💰","none":"إلغاء الإجازة ✅"}.get(vt,vt)
+    vta={"full":"إجازة كاملة 🏖️","from_start":"إجازة من أول الشهر حتى تاريخ 🗓️","from_date":"إجازة من تاريخ 📅","deduct":"خصم مبلغ ➖","fixed":"مبلغ ثابت للمصاريف 💰","none":"إلغاء الإجازة ✅"}.get(vt,vt)
     msg="🏠 *تنظيم السكن*\n🏖️ تحديث إجازة\n👤 "+name+"  |  "+vta+"\n📅 "+month
-    if vt=="from_date" and vdate: msg+="\n🗓️ التاريخ: "+vdate
+    if vt in("from_date","from_start") and vdate: msg+="\n🗓️ التاريخ: "+vdate
     if note: msg+="\n📝 "+note
     msg+="\n🕐 "+_now()
     wa(msg)
@@ -271,7 +271,12 @@ def exp_ratio(vi,dim,sy,sm):
     vt=vi.get("type","none")
     if vt=="full": return 0.0
     if vt=="fixed": return 0.0
-    if vt=="from_start": return max(0.0,(dim-min(int(vi.get("days",0)),dim))/dim)
+    if vt=="from_start":
+        vd=vi.get("date")
+        if vd:
+            pr=max(0,dim-(vd.day-1))
+            return pr/dim
+        return 0.0
     if vt=="from_date":
         vd=vi.get("date")
         if vd: return min(max(0,(vd-date(sy,sm,1)).days),dim)/dim
@@ -296,6 +301,7 @@ rpp=total_rent/len(SHABAB) if SHABAB else 0.0
 
 # ── توزيع كل مصروف على حدة ──
 # "إجازة من تاريخ": يشارك في المصاريف المسجّلة بتاريخ <= تاريخ إجازته فقط
+# "إجازة من أول الشهر حتى تاريخ": يشارك في المصاريف المسجّلة بتاريخ >= تاريخ عودته فقط
 _share={p:0.0 for p in SHABAB}
 if not mdf.empty:
     for _,_row in mdf.iterrows():
@@ -306,6 +312,10 @@ if not mdf.empty:
             if vt=="from_date":
                 vd=v.get("date")
                 if vd and edate is not None: wts[p]=1.0 if edate<=vd else 0.0
+                else: wts[p]=1.0
+            elif vt=="from_start":
+                vd=v.get("date")
+                if vd and edate is not None: wts[p]=1.0 if edate>=vd else 0.0
                 else: wts[p]=1.0
             else:
                 wts[p]=er[p]
@@ -381,7 +391,7 @@ with tab1:
         for row in summary:
             b=row["رصيد"]; vt=row["إجازة"]
             if vt and vt!="none":
-                vl={"full":"🏖️ إجازة كاملة","from_start":f"🗓️ مصاريف {row['نسبة']*100:.0f}%",
+                vl={"full":"🏖️ إجازة كاملة","from_start":"🗓️ إجازة من أول الشهر",
                     "from_date":"📅 إجازة من تاريخ","deduct":"➖ خصم","fixed":"💰 مبلغ ثابت"}.get(vt,"")
                 bg=f'<span class="badge-vacation">{vl} + إيجار كامل</span>'
             elif abs(b)<0.01: bg='<span class="badge-zero">➖ صفر</span>'
@@ -396,7 +406,7 @@ with tab1:
         for row in summary:
             b=row["رصيد"]; vt=row["إجازة"]
             st2="له 🟢" if b>0 else ("عليه 🔴" if b<0 else "صفر ➖")
-            nt=(" (إجازة)" if vt=="full" else f" (مصاريف {row['نسبة']*100:.0f}%)" if vt=="from_start" else " (إجازة من تاريخ)" if vt=="from_date" else " (خصم)" if vt=="deduct" else " (مبلغ ثابت)" if vt=="fixed" else "")
+            nt=(" (إجازة)" if vt=="full" else " (إجازة من أول الشهر)" if vt=="from_start" else " (إجازة من تاريخ)" if vt=="from_date" else " (خصم)" if vt=="deduct" else " (مبلغ ثابت)" if vt=="fixed" else "")
             lines.append(f"• {row['الاسم']}{nt}: {st2} *{abs(b):.3f}*")
         report_text = "\n".join(lines)
         st.markdown('<div class="whatsapp-box">'+report_text+'</div>',unsafe_allow_html=True)
@@ -662,7 +672,7 @@ with tab5:
         st.subheader(f"🏖️ إدارة الإجازات – {sel_month_ar}")
         st.markdown("""<div class="info-box">💡 <b>الإجازة تؤثر على المصاريف فقط.</b> الإيجار ثابت.<br>
 • <b>إجازة كاملة</b>: بدون مصاريف + إعفاء تلقائي من التنظيف والأنبوبة.<br>
-• <b>غياب من أول الشهر</b>: يشارك في الإيجار، ونسبة مشاركته في المصاريف = الأيام الحاضرة/أيام الشهر.<br>
+• <b>إجازة من أول الشهر حتى تاريخ</b>: لا يُحسب عليه أي مصروف تاريخه قبل تاريخ العودة، ويشارك بالكامل في كل مصروف من تاريخ العودة حتى آخر الشهر.<br>
 • <b>إجازة من تاريخ</b>: يشارك بالكامل في كل مصروف تاريخه قبل أو يساوي تاريخ نزوله، ولا يُحسب عليه أي مصروف بعد ذلك التاريخ.<br>
 • <b>خصم مبلغ</b>: يشارك بالكامل ثم يُخصم مبلغ ثابت من حصته.<br>
 • <b>مبلغ ثابت للمصاريف</b>: يدفع الإيجار كاملاً + مبلغ ثابت تحدده كنصيبه الكامل من المصاريف (بدل الحساب النسبي).
@@ -673,15 +683,16 @@ with tab5:
                 vt=st.radio("نوع الإجازة",
                     options=["none","full","from_start","from_date","deduct","fixed"],
                     format_func=lambda x:{"none":"✅ لا توجد إجازة","full":"🏖️ إجازة كاملة",
-                        "from_start":"🗓️ غياب من أول الشهر","from_date":"📅 إجازة من تاريخ",
+                        "from_start":"🗓️ إجازة من أول الشهر حتى تاريخ","from_date":"📅 إجازة من تاريخ",
                         "deduct":"➖ خصم مبلغ ثابت","fixed":"💰 مبلغ ثابت للمصاريف"}[x],
                     index=["none","full","from_start","from_date","deduct","fixed"].index(v.get("type","none")),
                     key="vt_"+p)
                 ex={}
                 if vt=="from_start":
-                    ab=st.number_input("أيام الغياب",1,dim,int(v.get("days",1)),key="vd_"+p)
-                    pr=dim-ab; st.info(f"مصاريف: {pr}/{dim} يوم ({pr/dim*100:.1f}%)")
-                    ex["days"]=ab
+                    vd=v.get("date") or date(sel_y,sel_m,15)
+                    vdt=st.date_input("تاريخ العودة (يبدأ المشاركة من هذا اليوم)",vd,date(sel_y,sel_m,1),date(sel_y,sel_m,dim),key="vdt_start_"+p)
+                    pr=max(0,dim-(vdt.day-1)); st.info(f"مصاريف: {pr}/{dim} يوم (من {vdt.day} حتى آخر الشهر)")
+                    ex["date"]=vdt
                 elif vt=="from_date":
                     vd=v.get("date") or date(sel_y,sel_m,15)
                     vdt=st.date_input("تاريخ البداية",vd,date(sel_y,sel_m,1),date(sel_y,sel_m,dim),key="vdt_"+p)
@@ -704,14 +715,14 @@ with tab5:
                                  "deductAmt":ex.get("deduct_amount",""),"fixedAmt":ex.get("fixed_amount",""),
                                  "note":ex.get("note","")})
                     if "Success" in res:
-                        vdate_str = ex.get("date","").strftime("%d/%m/%Y") if vt=="from_date" and ex.get("date") else ""
+                        vdate_str = ex.get("date","").strftime("%d/%m/%Y") if vt in("from_date","from_start") and ex.get("date") else ""
                         wa_vac(p,vt,sel_month_ar,vdate_str,ex.get("note","")); st.success("✅"); clr(); st.rerun()
                     else: st.error(res)
         if vac_month:
             st.divider(); st.markdown("**📋 الإجازات المسجلة:**")
             for p,v in vac_month.items():
                 vt=v.get("type","")
-                desc={"full":"إجازة كاملة (+ إعفاء خدمات)","from_start":f"غياب {v.get('days',0)} يوم",
+                desc={"full":"إجازة كاملة (+ إعفاء خدمات)","from_start":f"إجازة من أول الشهر حتى {v.get('date','')}",
                       "from_date":f"إجازة من {v.get('date','')}","deduct":f"خصم {v.get('deduct_amount',0):.3f}",
                       "fixed":f"إيجار كامل + مبلغ ثابت {v.get('fixed_amount',0):.3f} كنصيب من المصاريف"}.get(vt,"")
                 if v.get("note"): desc+=" | 📝 "+v["note"]
