@@ -281,23 +281,44 @@ def exp_ratio(vi,dim,sy,sm):
 
 _raw=all_data[all_data["الشهر"]==sel_month_ar] if not all_data.empty else pd.DataFrame()
 mdf=_raw[pd.to_numeric(_raw["المبلغ"],errors='coerce').fillna(0)>0].copy() if not _raw.empty else pd.DataFrame()
-tot_exp=pd.to_numeric(mdf["المبلغ"],errors='coerce').sum() if not mdf.empty else 0.0
+if not mdf.empty:
+    mdf["_amt"]=pd.to_numeric(mdf["المبلغ"],errors='coerce').fillna(0.0)
+    mdf["_date"]=mdf["التاريخ"].apply(_pd)
+tot_exp=mdf["_amt"].sum() if not mdf.empty else 0.0
+
 er={}; dm={}; fm={}; tr=0.0
 for p in SHABAB:
     v=vac_month.get(p,{}); r=exp_ratio(v,dim,sel_y,sel_m)
     er[p]=r; tr+=r
     dm[p]=float(v.get("deduct_amount",0)) if v.get("type")=="deduct" else 0.0
     fm[p]=float(v.get("fixed_amount",0)) if v.get("type")=="fixed" else 0.0
-total_fixed=sum(fm.values())
-distributable=max(0.0,tot_exp-total_fixed)
 rpp=total_rent/len(SHABAB) if SHABAB else 0.0
+
+# ── توزيع كل مصروف على حدة ──
+# "إجازة من تاريخ": يشارك في المصاريف المسجّلة بتاريخ <= تاريخ إجازته فقط
+_share={p:0.0 for p in SHABAB}
+if not mdf.empty:
+    for _,_row in mdf.iterrows():
+        amt=_row["_amt"]; edate=_row["_date"]
+        wts={}
+        for p in SHABAB:
+            v=vac_month.get(p,{}); vt=v.get("type","none")
+            if vt=="from_date":
+                vd=v.get("date")
+                if vd and edate is not None: wts[p]=1.0 if edate<=vd else 0.0
+                else: wts[p]=1.0
+            else:
+                wts[p]=er[p]
+        tw=sum(wts.values())
+        if tw>0:
+            for p in SHABAB:
+                _share[p]+=amt*wts[p]/tw
 
 def exp_share(p):
     v=vac_month.get(p,{})
     if v.get("type")=="fixed": return fm[p]
-    if tr==0: return 0.0
-    if v.get("type")=="deduct": return max(0.0,(er[p]/tr)*distributable-dm[p])
-    return (er[p]/tr)*distributable
+    if v.get("type")=="deduct": return max(0.0,_share[p]-dm[p])
+    return _share[p]
 
 summary=[]
 for p in SHABAB:
@@ -361,7 +382,7 @@ with tab1:
             b=row["رصيد"]; vt=row["إجازة"]
             if vt and vt!="none":
                 vl={"full":"🏖️ إجازة كاملة","from_start":f"🗓️ مصاريف {row['نسبة']*100:.0f}%",
-                    "from_date":f"📅 مصاريف {row['نسبة']*100:.0f}%","deduct":"➖ خصم","fixed":"💰 مبلغ ثابت"}.get(vt,"")
+                    "from_date":"📅 إجازة من تاريخ","deduct":"➖ خصم","fixed":"💰 مبلغ ثابت"}.get(vt,"")
                 bg=f'<span class="badge-vacation">{vl} + إيجار كامل</span>'
             elif abs(b)<0.01: bg='<span class="badge-zero">➖ صفر</span>'
             elif b>0:         bg=f'<span class="badge-green">🟢 له {b:.3f}</span>'
@@ -375,7 +396,7 @@ with tab1:
         for row in summary:
             b=row["رصيد"]; vt=row["إجازة"]
             st2="له 🟢" if b>0 else ("عليه 🔴" if b<0 else "صفر ➖")
-            nt=(" (إجازة)" if vt=="full" else f" (مصاريف {row['نسبة']*100:.0f}%)" if vt in("from_start","from_date") else " (خصم)" if vt=="deduct" else " (مبلغ ثابت)" if vt=="fixed" else "")
+            nt=(" (إجازة)" if vt=="full" else f" (مصاريف {row['نسبة']*100:.0f}%)" if vt=="from_start" else " (إجازة من تاريخ)" if vt=="from_date" else " (خصم)" if vt=="deduct" else " (مبلغ ثابت)" if vt=="fixed" else "")
             lines.append(f"• {row['الاسم']}{nt}: {st2} *{abs(b):.3f}*")
         report_text = "\n".join(lines)
         st.markdown('<div class="whatsapp-box">'+report_text+'</div>',unsafe_allow_html=True)
@@ -641,7 +662,9 @@ with tab5:
         st.subheader(f"🏖️ إدارة الإجازات – {sel_month_ar}")
         st.markdown("""<div class="info-box">💡 <b>الإجازة تؤثر على المصاريف فقط.</b> الإيجار ثابت.<br>
 • <b>إجازة كاملة</b>: بدون مصاريف + إعفاء تلقائي من التنظيف والأنبوبة.<br>
-• <b>غياب من أول الشهر / من تاريخ / خصم مبلغ</b>: يشارك في الإيجار.<br>
+• <b>غياب من أول الشهر</b>: يشارك في الإيجار، ونسبة مشاركته في المصاريف = الأيام الحاضرة/أيام الشهر.<br>
+• <b>إجازة من تاريخ</b>: يشارك بالكامل في كل مصروف تاريخه قبل أو يساوي تاريخ نزوله، ولا يُحسب عليه أي مصروف بعد ذلك التاريخ.<br>
+• <b>خصم مبلغ</b>: يشارك بالكامل ثم يُخصم مبلغ ثابت من حصته.<br>
 • <b>مبلغ ثابت للمصاريف</b>: يدفع الإيجار كاملاً + مبلغ ثابت تحدده كنصيبه الكامل من المصاريف (بدل الحساب النسبي).
 </div>""",unsafe_allow_html=True)
         for p in SHABAB:
