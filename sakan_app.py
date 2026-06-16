@@ -56,14 +56,6 @@ MONTHS_AR = {"January":"يناير","February":"فبراير","March":"مارس"
              "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
              "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
 
-# دالة الـ API الأساسية لإرسال واستقبال البيانات مع الـ Google Apps Script
-def api(payload):
-    try:
-        resp = requests.post(SCRIPT, data=payload, timeout=30)
-        return resp.text
-    except Exception as e:
-        return "Error: " + str(e)
-
 def next_friday():
     t = date.today(); d = (4 - t.weekday()) % 7
     return t + timedelta(days=d if d else 7)
@@ -201,9 +193,9 @@ def load_rotation_order(service):
     return []
 
 def resolve_order(service, persons, vac_month, exempts):
-    """يرجع قائمة الأشخاص المتاحين بترتيب الدوران المحفوظ، يستثني المجازين كاملاً"""
-    full_vac={p for p in persons if vac_month.get(p,{}).get("type")=="full"}
-    active=[p for p in persons if p not in full_vac and p not in exempts]
+    """يرجع قائمة الأشخاص المتاحين بترتيب الدوران المحفوظ، يستثني كل من عليه إجازة من أي نوع"""
+    on_vac={p for p in persons if vac_month.get(p,{}).get("type")}
+    active=[p for p in persons if p not in on_vac and p not in exempts]
     saved=load_rotation_order(service)
     # رتّب بناءً على المحفوظ، ثم أضف الجدد في نهايته
     ordered=[p for p in saved if p in active]
@@ -215,13 +207,17 @@ def load_log():
     try: return requests.get(SCRIPT+"?type=log",timeout=10).json()
     except: return []
 
+def api(payload):
+    try: return requests.post(SCRIPT,data=payload,timeout=30).text
+    except Exception as e: return "Error: "+str(e)
+
 def clr(): st.cache_data.clear()
 
 # ══════════════════════════════════════════════
 #  منطق التنظيف – مصدر حقيقة واحد
 # ══════════════════════════════════════════════
 def get_next_cleaner(cl_log, persons, vac_month, cl_exempt):
-    active=[p for p in persons if vac_month.get(p,{}).get("type")!="full" and p not in cl_exempt]
+    active=[p for p in persons if not vac_month.get(p,{}).get("type") and p not in cl_exempt]
     if not active: return None
     if not cl_log: return active[0]
     np=cl_log[0].get("nextPerson","").strip()
@@ -231,7 +227,7 @@ def get_next_cleaner(cl_log, persons, vac_month, cl_exempt):
     return active[0]
 
 def get_next_gas(gas_log, persons, vac_month, gas_exempt):
-    active=[p for p in persons if vac_month.get(p,{}).get("type")!="full" and p not in gas_exempt]
+    active=[p for p in persons if not vac_month.get(p,{}).get("type") and p not in gas_exempt]
     if not active: return None
     if not gas_log: return active[0]
     np=gas_log[0].get("nextPerson","")
@@ -334,11 +330,14 @@ for p in SHABAB:
 rpp=total_rent/len(SHABAB) if SHABAB else 0.0
 
 # ── توزيع كل مصروف على حدة ──
+# "إجازة من تاريخ": يشارك في المصاريف المسجّلة بتاريخ <= تاريخ إجازته فقط
+# "إجازة من أول الشهر حتى تاريخ": يشارك في المصاريف المسجّلة بتاريخ >= تاريخ عودته فقط
 _share={p:0.0 for p in SHABAB}
 if not mdf.empty:
     for _,_row in mdf.iterrows():
         amt=_row["_amt"]; edate=_row["_date"]; is_fx=_row["_fixed"]
         if is_fx:
+            # مصروف ثابت: يُقسَّم بالتساوي على الجميع بمن فيهم من في أجازة
             per=amt/len(SHABAB) if SHABAB else 0.0
             for p in SHABAB: _share[p]+=per
         else:
@@ -356,6 +355,8 @@ if not mdf.empty:
             tw=sum(wts.values())
             if tw>0:
                 for p in SHABAB: _share[p]+=amt*wts[p]/tw
+            for p in SHABAB:
+                _share[p]+=amt*wts[p]/tw
 
 def exp_share(p):
     v=vac_month.get(p,{})
@@ -462,7 +463,7 @@ with tab2:
                 am=st.number_input("المبلغ",min_value=0.0,step=0.1,format="%.3f")
                 nt=st.text_input("البيان",placeholder="مثال: شاي، سكر…")
                 ed=st.date_input("التاريخ",value=date.today())
-                is_fixed=st.checkbox("📌 مصروف ثابت (يُقسَّم على الجميع بمن فيهم من فى أجازة)")
+                is_fixed=st.checkbox("📌 مصروف ثابت (يُقسَّم على الجميع بمن فيهم من في أجازة)")
                 ui=st.file_uploader("📸 صورة الفاتورة",type=["png","jpg","jpeg"])
                 if st.form_submit_button("✅ تسجيل",use_container_width=True):
                     if am>0:
@@ -542,7 +543,7 @@ with tab4:
     with sv1:
         st.markdown("""<div class="info-box">
 🧹 <b>نظام التنظيف:</b> رتّب الأسماء بالسحب والإفلات. أول اسم عليه الدور.
-بعد التنظيف ينزل للأسفل تلقائياً. من في إجازة كاملة أو معفى لا يظهر.
+بعد التنظيف ينزل للأسفل تلقائياً. من عليه إجازة (أي نوع) أو معفى لا يظهر.
 </div>""", unsafe_allow_html=True)
 
         if not SHABAB:
@@ -565,6 +566,7 @@ with tab4:
             if "cl_order_draft" not in st.session_state:
                 st.session_state["cl_order_draft"] = cl_order.copy()
             else:
+                # تحديث إذا تغيّرت القائمة (شخص جديد / عودة من إجازة)
                 existing = st.session_state["cl_order_draft"]
                 for p in cl_order:
                     if p not in existing: existing.append(p)
@@ -572,6 +574,7 @@ with tab4:
 
             draft_cl = st.session_state["cl_order_draft"]
 
+            # عرض القائمة مع أزرار تحريك
             for i, p in enumerate(draft_cl):
                 is_first = (i == 0)
                 badge = '<span class="drag-badge">🧹 دوره الآن</span>' if is_first else f'<span style="color:#6b7280;font-size:.8rem;">#{i+1}</span>'
@@ -614,6 +617,7 @@ with tab4:
                                 st.success(f"✅ {done} نظّف! القادم: {next_p}")
                                 clr(); st.rerun()
 
+            # ── زر حفظ الترتيب اليدوي ──
             st.markdown("---")
             if st.button("💾 حفظ الترتيب الحالي", key="save_cl_order", use_container_width=True):
                 new_order = ",".join(st.session_state["cl_order_draft"])
@@ -622,6 +626,7 @@ with tab4:
                     st.success("✅ تم حفظ الترتيب")
                     clr(); st.rerun()
 
+            # ── سجل التنظيف ──
             st.markdown("### 📋 سجل التنظيف")
             if cl_log:
                 for entry in cl_log[:15]:
@@ -638,7 +643,7 @@ with tab4:
                 st.info("لا يوجد سجل.")
     with sv2:
         st.markdown("""<div class="info-box">🔵 <b>نظام الأنبوبة:</b> رتّب الأسماء بالسحب والإفلات. أول اسم عليه الدور.
-بعد الملء ينزل للأسفل تلقائياً. من في إجازة كاملة أو معفى لا يظهر.</div>""",unsafe_allow_html=True)
+بعد الملء ينزل للأسفل تلقائياً. من عليه إجازة (أي نوع) أو معفى لا يظهر.</div>""",unsafe_allow_html=True)
         if not SHABAB: st.info("أضف أشخاصاً أولاً.")
         else:
             gas_order = resolve_order("gas", SHABAB, vac_month, gas_ex)
@@ -651,6 +656,7 @@ with tab4:
                 '<div style="color:#60a5fa;font-size:1.8rem;font-weight:800;margin:6px 0;">'+(cur_gas or "—")+'</div>'
                 '</div>',unsafe_allow_html=True)
 
+            # ── قائمة السحب والإفلات ──
             st.markdown("#### 📋 ترتيب الدوران")
             if "gas_order_draft" not in st.session_state:
                 st.session_state["gas_order_draft"] = gas_order.copy()
@@ -720,14 +726,14 @@ with tab4:
     # ────── الإعفاءات ──────
     with sv3:
         st.markdown("""<div class="info-box">🚫 <b>الإعفاءات الدائمة:</b>
-من في إجازة كاملة يُعفى تلقائياً. هذا القسم للإعفاءات الدائمة (مريض، عمل، إلخ).</div>""",unsafe_allow_html=True)
+من عليه إجازة (أي نوع) يُعفى تلقائياً. هذا القسم للإعفاءات الدائمة (مريض، عمل، إلخ).</div>""",unsafe_allow_html=True)
         if not SHABAB: st.info("أضف أشخاصاً أولاً.")
         else:
             xc1,xc2=st.columns(2)
             for xcol,svc,exs,lbl in[(xc1,"cleaning",cl_ex,"🧹 إعفاءات التنظيف"),(xc2,"gas",gas_ex,"🔵 إعفاءات الأنبوبة")]:
                 with xcol:
                     st.markdown("### "+lbl)
-                    visible=[p for p in SHABAB if vac_month.get(p,{}).get("type")!="full"]
+                    visible=[p for p in SHABAB if not vac_month.get(p,{}).get("type")]
                     if not visible: st.info("الجميع في إجازة.")
                     for p in visible:
                         is_ex=p in exs
@@ -750,8 +756,9 @@ with tab5:
     if not SHABAB: st.info("أضف أشخاصاً أولاً.")
     else:
         st.subheader(f"🏖️ إدارة الإجازات – {sel_month_ar}")
-        st.markdown("""<div class="info-box">💡 <b>الإجازة تؤثر على المصاريف فقط.</b> الإيجار ثابت.<br>
-• <b>إجازة كاملة</b>: بدون مصاريف + إعفاء تلقائي من التنظيف والأنبوبة.<br>
+        st.markdown("""<div class="info-box">💡 <b>الإجازة تؤثر على المصاريف، والإيجار يبقى ثابتاً على الجميع.</b><br>
+⚠️ تسجيل أي نوع إجازة (أياً كان) يُعفي الشخص تلقائياً من دور التنظيف والأنبوبة طول هذا الشهر.<br>
+• <b>إجازة كاملة</b>: بدون مصاريف.<br>
 • <b>إجازة من أول الشهر حتى تاريخ</b>: لا يُحسب عليه أي مصروف تاريخه قبل تاريخ العودة، ويشارك بالكامل في كل مصروف من تاريخ العودة حتى آخر الشهر.<br>
 • <b>إجازة من تاريخ</b>: يشارك بالكامل في كل مصروف تاريخه قبل أو يساوي تاريخ نزوله، ولا يُحسب عليه أي مصروف بعد ذلك التاريخ.<br>
 • <b>خصم مبلغ</b>: يشارك بالكامل ثم يُخصم مبلغ ثابت من حصته.<br>
@@ -814,10 +821,11 @@ with tab5:
                         if st.button("🔙 عودة", key="ret_"+p, use_container_width=True, help="تسجيل عودة "+p+" من الإجازة"):
                             res=api({"action":"returnFromVacation","name":p,"month":sel_month_ar})
                             if "Success" in res:
+                                # عند العودة: موضعه في التنظيف = الثاني، في الأنبوبة = الأخير
                                 for svc in ("cleaning","gas"):
                                     saved=load_rotation_order(svc)
-                                    full_vac_others={x for x in SHABAB if x!=p and vac_month.get(x,{}).get("type")=="full"}
-                                    cur=[x for x in saved if x not in full_vac_others and x!=p]
+                                    others_on_vac={x for x in SHABAB if x!=p and vac_month.get(x,{}).get("type")}
+                                    cur=[x for x in saved if x not in others_on_vac and x!=p]
                                     if svc=="cleaning":
                                         if len(cur)>=1: cur.insert(1,p)
                                         else: cur.append(p)
@@ -826,6 +834,7 @@ with tab5:
                                     api({"action":"saveRotationOrder","service":svc,"order":",".join(cur)})
                                 wa("🏠 *تنظيم السكن*\n🔙 عودة من الإجازة\n👤 "+p+"\n🕐 "+_now())
                                 st.success(f"✅ تم تسجيل عودة {p}")
+                                # مسح draft ليُعاد بناؤه
                                 for k in ("cl_order_draft","gas_order_draft"):
                                     if k in st.session_state: del st.session_state[k]
                                 clr(); st.rerun()
