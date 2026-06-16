@@ -51,7 +51,7 @@ html,body,[class*="css"]{font-family:'Tajawal',sans-serif!important;direction:rt
 #  الثوابت
 # ══════════════════════════════════════════════
 SHEET_CSV = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT    = "https://script.google.com/macros/s/AKfycbxCgAXjypLxZ4TT6gMd3AkXt1sQgtHRdnkA9iRQKxgytHS175jWEuqRmhDYB51wu-5Z/exec"
+SCRIPT    = "https://script.google.com/macros/s/AKfycbxKOiorQ9q9t0MLNW55t39K637fK9sgmb1ZHeNkUTpdaewlzd__9b8UfMR2fJOFYQjJ/exec"
 MONTHS_AR = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
              "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
              "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
@@ -160,7 +160,8 @@ def load_data():
         df=pd.read_csv(SHEET_CSV+"&cb="+str(datetime.now().timestamp()))
         df["_row"]=range(2,len(df)+2)
         df["_rowId"]=df["الشهر"].astype(str)+"|"+df["الاسم"].astype(str)+"|"+df["المبلغ"].astype(str)+"|"+df["التاريخ"].astype(str)
-        if "ثابت" not in df.columns: df["ثابت"]=""
+        for col in ["ثابت","الصورة"]:
+            if col not in df.columns: df[col]=""
         return df
     except: return pd.DataFrame(columns=["الشهر","الاسم","المبلغ","البيان","التاريخ","الصورة","ثابت","_row","_rowId"])
 
@@ -315,7 +316,7 @@ mdf=_raw[pd.to_numeric(_raw["المبلغ"],errors='coerce').fillna(0)>0].copy()
 if not mdf.empty:
     mdf["_amt"]=pd.to_numeric(mdf["المبلغ"],errors='coerce').fillna(0.0)
     mdf["_date"]=mdf["التاريخ"].apply(_pd)
-    mdf["_fixed"]=mdf["ثابت"].astype(str).str.strip().isin(["نعم","1","Yes","yes"])
+    mdf["_fixed"]=mdf["ثابت"].fillna("").astype(str).str.strip().isin(["نعم","1","Yes","yes"])
 tot_exp=mdf["_amt"].sum() if not mdf.empty else 0.0
 
 er={}; dm={}; fm={}; tr=0.0
