@@ -36,14 +36,22 @@ html,body,[class*="css"]{font-family:'Tajawal',sans-serif!important;direction:rt
 .stTabs [aria-selected="true"]{background:linear-gradient(135deg,#1a237e,#1565c0)!important;color:#fff!important;border-color:#1565c0!important}
 .info-box{background:#0d1f3c;border:1px solid #1d4ed8;border-radius:10px;padding:14px 18px;color:#93c5fd;margin-bottom:20px}
 .rule-box{background:#1a1a0d;border:1px solid #854d0e;border-radius:10px;padding:14px 18px;color:#fde047;margin-bottom:20px;font-size:.9rem}
-.vacation-notice{background:#0d1f3c;border:1px solid #1d4ed8;border-right:4px solid #60a5fa;border-radius:10px;padding:12px 16px;color:#93c5fd;font-size:.9rem;margin-bottom:8px}
+.drag-list{list-style:none;padding:0;margin:0}
+.drag-item{display:flex;align-items:center;background:#1a1e2e;border:1px solid #2a2f45;border-radius:12px;padding:12px 16px;margin-bottom:8px;cursor:grab;direction:rtl;gap:12px;transition:border-color .2s}
+.drag-item.first-item{border:2px solid #4ade80;background:linear-gradient(135deg,#0d3b2e,#1a2e1e)}
+.drag-item.first-item-gas{border:2px solid #60a5fa;background:linear-gradient(135deg,#0d1f3c,#1a2e4a)}
+.drag-item:active{cursor:grabbing;border-color:#6366f1}
+.drag-handle{color:#4a5568;font-size:1.1rem;flex-shrink:0}
+.drag-name{font-weight:700;color:#e0e6ff;font-size:.95rem;flex:1}
+.drag-badge{font-size:.75rem;padding:2px 10px;border-radius:20px;background:#0d3b2e;color:#4ade80;border:1px solid #166534}
+.drag-badge-gas{background:#0d1f3c;color:#60a5fa;border:1px solid #1d4ed8}
 </style>""", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
 #  الثوابت
 # ══════════════════════════════════════════════
 SHEET_CSV = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT    = "https://script.google.com/macros/s/AKfycbx3drGo-kDhK7koUeZS88YJGZGgjdfkE6dRWaLGmvioanWMg_2t9tFxOA7qjqnFgucc/exec"
+SCRIPT    = "https://script.google.com/macros/s/AKfycbxCgAXjypLxZ4TT6gMd3AkXt1sQgtHRdnkA9iRQKxgytHS175jWEuqRmhDYB51wu-5Z/exec"
 MONTHS_AR = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
              "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
              "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
@@ -152,8 +160,9 @@ def load_data():
         df=pd.read_csv(SHEET_CSV+"&cb="+str(datetime.now().timestamp()))
         df["_row"]=range(2,len(df)+2)
         df["_rowId"]=df["الشهر"].astype(str)+"|"+df["الاسم"].astype(str)+"|"+df["المبلغ"].astype(str)+"|"+df["التاريخ"].astype(str)
+        if "ثابت" not in df.columns: df["ثابت"]=""
         return df
-    except: return pd.DataFrame(columns=["الشهر","الاسم","المبلغ","البيان","التاريخ","الصورة","_row","_rowId"])
+    except: return pd.DataFrame(columns=["الشهر","الاسم","المبلغ","البيان","التاريخ","الصورة","ثابت","_row","_rowId"])
 
 @st.cache_data(ttl=60)
 def load_cl():
@@ -174,11 +183,28 @@ def load_exempt():
     try: return requests.get(SCRIPT+"?type=exemptions",timeout=10).json()
     except: return {}
 
+@st.cache_data(ttl=60)
+def load_rotation_order(service):
+    try:
+        r=requests.get(SCRIPT+"?type=rotation_"+service,timeout=10).text.strip()
+        if r: return [x.strip() for x in r.split(",") if x.strip()]
+    except: pass
+    return []
+
+def resolve_order(service, persons, vac_month, exempts):
+    """يرجع قائمة الأشخاص المتاحين بترتيب الدوران المحفوظ، يستثني المجازين كاملاً"""
+    full_vac={p for p in persons if vac_month.get(p,{}).get("type")=="full"}
+    active=[p for p in persons if p not in full_vac and p not in exempts]
+    saved=load_rotation_order(service)
+    # رتّب بناءً على المحفوظ، ثم أضف الجدد في نهايته
+    ordered=[p for p in saved if p in active]
+    for p in active:
+        if p not in ordered: ordered.append(p)
+    return ordered
+
 def load_log():
     try: return requests.get(SCRIPT+"?type=log",timeout=10).json()
     except: return []
-
-def api(payload):
     try: return requests.post(SCRIPT,data=payload,timeout=30).text
     except Exception as e: return "Error: "+str(e)
 
@@ -289,6 +315,7 @@ mdf=_raw[pd.to_numeric(_raw["المبلغ"],errors='coerce').fillna(0)>0].copy()
 if not mdf.empty:
     mdf["_amt"]=pd.to_numeric(mdf["المبلغ"],errors='coerce').fillna(0.0)
     mdf["_date"]=mdf["التاريخ"].apply(_pd)
+    mdf["_fixed"]=mdf["ثابت"].astype(str).str.strip().isin(["نعم","1","Yes","yes"])
 tot_exp=mdf["_amt"].sum() if not mdf.empty else 0.0
 
 er={}; dm={}; fm={}; tr=0.0
@@ -305,22 +332,26 @@ rpp=total_rent/len(SHABAB) if SHABAB else 0.0
 _share={p:0.0 for p in SHABAB}
 if not mdf.empty:
     for _,_row in mdf.iterrows():
-        amt=_row["_amt"]; edate=_row["_date"]
-        wts={}
-        for p in SHABAB:
-            v=vac_month.get(p,{}); vt=v.get("type","none")
-            if vt=="from_date":
-                vd=v.get("date")
-                if vd and edate is not None: wts[p]=1.0 if edate<=vd else 0.0
-                else: wts[p]=1.0
-            elif vt=="from_start":
-                vd=v.get("date")
-                if vd and edate is not None: wts[p]=1.0 if edate>=vd else 0.0
-                else: wts[p]=1.0
-            else:
-                wts[p]=er[p]
-        tw=sum(wts.values())
-        if tw>0:
+        amt=_row["_amt"]; edate=_row["_date"]; is_fx=_row["_fixed"]
+        if is_fx:
+            # مصروف ثابت: يُقسَّم بالتساوي على الجميع بمن فيهم المجازون
+            per=amt/len(SHABAB) if SHABAB else 0.0
+            for p in SHABAB: _share[p]+=per
+        else:
+            wts={}
+            for p in SHABAB:
+                v=vac_month.get(p,{}); vt=v.get("type","none")
+                if vt=="full": wts[p]=0.0
+                elif vt=="from_date":
+                    vd=v.get("date")
+                    wts[p]=1.0 if (edate is None or edate<=vd) else 0.0
+                elif vt=="from_start":
+                    vd=v.get("date")
+                    wts[p]=1.0 if (edate is None or edate>=vd) else 0.0
+                else: wts[p]=er[p]
+            tw=sum(wts.values())
+            if tw>0:
+                for p in SHABAB: _share[p]+=amt*wts[p]/tw
             for p in SHABAB:
                 _share[p]+=amt*wts[p]/tw
 
@@ -429,6 +460,7 @@ with tab2:
                 am=st.number_input("المبلغ",min_value=0.0,step=0.1,format="%.3f")
                 nt=st.text_input("البيان",placeholder="مثال: شاي، سكر…")
                 ed=st.date_input("التاريخ",value=date.today())
+                is_fixed=st.checkbox("📌 مصروف ثابت (يُقسَّم على الجميع بمن فيهم المجازون)")
                 ui=st.file_uploader("📸 صورة الفاتورة",type=["png","jpg","jpeg"])
                 if st.form_submit_button("✅ تسجيل",use_container_width=True):
                     if am>0:
@@ -444,7 +476,9 @@ with tab2:
                             except: pass
                         with st.spinner("حفظ…"):
                             res=api({"action":"addExpense","month":sel_month_ar,"name":nm,
-                                     "amount":am,"note":nt,"date":str(ed),"imgData":ib,"imgName":inm})
+                                     "amount":am,"note":nt,"date":str(ed),
+                                     "imgData":ib,"imgName":inm,
+                                     "isFixed":"1" if is_fixed else "0"})
                         if "Success" in res:
                             wa_add_expense(nm,am,nt,sel_month_ar); st.success("✅"); st.balloons(); clr(); st.rerun()
                         else: st.error(res)
@@ -505,67 +539,89 @@ with tab4:
     # ────── التنظيف ──────
     with sv1:
         st.markdown("""<div class="info-box">
-🧹 <b>نظام التنظيف:</b> الدور يدور على المتاحين كل جمعة — شخص واحد.
-من في إجازة كاملة أو معفى يُستثنى تلقائياً.
+🧹 <b>نظام التنظيف:</b> رتّب الأسماء بالسحب والإفلات. أول اسم عليه الدور.
+بعد التنظيف ينزل للأسفل تلقائياً. من في إجازة كاملة أو معفى لا يظهر.
 </div>""", unsafe_allow_html=True)
 
         if not SHABAB:
             st.info("أضف أشخاصاً أولاً.")
         else:
+            cl_order = resolve_order("cleaning", SHABAB, vac_month, cl_ex)
             fri_str_cl = next_friday().strftime("%d/%m/%Y")
-            cl_active  = [p for p in SHABAB if vac_month.get(p,{}).get("type")!="full" and p not in cl_ex]
+            cur_cleaner = cl_order[0] if cl_order else None
 
             # ── بطاقة الدور الحالي ──
             st.markdown(
                 '<div style="background:linear-gradient(135deg,#0d3b2e,#1a4a38);border:2px solid #4ade80;'
                 'border-radius:16px;padding:18px;text-align:center;margin-bottom:20px;">'
                 '<div style="color:#93c5fd;font-size:.85rem;">🧹 دور التنظيف – الجمعة '+fri_str_cl+'</div>'
-                '<div style="color:#4ade80;font-size:1.8rem;font-weight:800;margin:6px 0;">'+(nxt_cleaner or "—")+'</div>'
-                '</div>',unsafe_allow_html=True)
+                '<div style="color:#4ade80;font-size:1.8rem;font-weight:800;margin:6px 0;">'+(cur_cleaner or "—")+'</div>'
+                '</div>', unsafe_allow_html=True)
 
-            # ── شبكة حالة الأشخاص ──
-            gcols_cl=st.columns(min(len(SHABAB),5))
-            for i,p in enumerate(SHABAB):
-                is_n=p==nxt_cleaner; is_v=vac_month.get(p,{}).get("type")=="full"; is_ex=p in cl_ex
-                fills=sum(1 for e in cl_log if e.get("cleaner","")==p)
-                if is_v:   sl="🏖️ إجازة"; bc="#3b2a0d"; nc="#8892b0"
-                elif is_ex: sl="🚫 معفى";  bc="#3b0d0d"; nc="#8892b0"
-                elif is_n:  sl="🧹 دوره";  bc="#4ade80"; nc="#4ade80"
-                else:       sl=f"⏳ {fills}×"; bc="#2a2f45"; nc="#8892b0"
-                with gcols_cl[i%len(gcols_cl)]:
-                    st.markdown(
-                        '<div style="background:#1a1e2e;border:1px solid '+bc+';border-radius:10px;'
-                        'padding:10px;text-align:center;margin-bottom:8px;">'
-                        '<div style="color:'+nc+';font-weight:700;font-size:.85rem;">'+p+'</div>'
-                        '<div style="color:#6b7280;font-size:.75rem;margin-top:4px;">'+sl+'</div></div>',unsafe_allow_html=True)
+            # ── قائمة السحب والإفلات ──
+            st.markdown("#### 📋 ترتيب الدوران")
+            if "cl_order_draft" not in st.session_state:
+                st.session_state["cl_order_draft"] = cl_order.copy()
+            else:
+                # تحديث إذا تغيّرت القائمة (شخص جديد / عودة من إجازة)
+                existing = st.session_state["cl_order_draft"]
+                for p in cl_order:
+                    if p not in existing: existing.append(p)
+                st.session_state["cl_order_draft"] = [p for p in existing if p in cl_order]
 
-            # ── تسجيل التنظيف ──
-            st.markdown("### ✅ تسجيل التنظيف")
-            c_opts = cl_active or SHABAB
-            ci = c_opts.index(nxt_cleaner) if nxt_cleaner in c_opts else 0
-            cfiller = st.radio("👤 من نظّف؟", c_opts, index=ci, horizontal=True, key="cl_fill", label_visibility="visible")
-            nc_opts = [p for p in c_opts if p!=cfiller] or c_opts
-            sug_nc  = c_opts[(c_opts.index(cfiller)+1)%len(c_opts)] if cfiller in c_opts else nc_opts[0]
-            ni_cl   = nc_opts.index(sug_nc) if sug_nc in nc_opts else 0
-            cnext   = st.radio("🔜 الدور القادم؟", nc_opts, index=ni_cl, horizontal=True, key="cl_next", label_visibility="visible")
-            if st.button("💾 حفظ", type="primary", use_container_width=True, key="save_cl"):
-                fri_obj = next_friday()
-                fri_s   = fri_obj.strftime("%d/%m/%Y")
-                res = api({
-                    "action":     "addCleaningEntry",
-                    "cleaner":    cfiller,
-                    "weekFrom":   str(fri_obj),
-                    "weekTo":     str(fri_obj),
-                    "weekNum":    "1",
-                    "nextPerson": cnext,
-                    "note":       "",
-                })
+            draft_cl = st.session_state["cl_order_draft"]
+
+            # عرض القائمة مع أزرار تحريك
+            for i, p in enumerate(draft_cl):
+                is_first = (i == 0)
+                badge = '<span class="drag-badge">🧹 دوره الآن</span>' if is_first else f'<span style="color:#6b7280;font-size:.8rem;">#{i+1}</span>'
+                item_class = "drag-item first-item" if is_first else "drag-item"
+                col_name, col_up, col_down, col_done = st.columns([5, 1, 1, 2])
+                with col_name:
+                    st.markdown(f'<div class="{item_class}"><span class="drag-handle">⠿</span><span class="drag-name">{p}</span>{badge}</div>', unsafe_allow_html=True)
+                with col_up:
+                    if i > 0:
+                        if st.button("⬆️", key=f"cl_up_{i}", help="تحريك لأعلى"):
+                            draft_cl[i], draft_cl[i-1] = draft_cl[i-1], draft_cl[i]
+                            st.session_state["cl_order_draft"] = draft_cl
+                            st.rerun()
+                with col_down:
+                    if i < len(draft_cl)-1:
+                        if st.button("⬇️", key=f"cl_dn_{i}", help="تحريك لأسفل"):
+                            draft_cl[i], draft_cl[i+1] = draft_cl[i+1], draft_cl[i]
+                            st.session_state["cl_order_draft"] = draft_cl
+                            st.rerun()
+                with col_done:
+                    if is_first:
+                        if st.button("✅ نظّف!", key="cl_done_btn", type="primary", use_container_width=True):
+                            done = draft_cl.pop(0)
+                            draft_cl.append(done)
+                            st.session_state["cl_order_draft"] = draft_cl
+                            new_order = ",".join(draft_cl)
+                            next_p = draft_cl[0] if draft_cl else ""
+                            res = api({
+                                "action": "addCleaningEntry",
+                                "cleaner": done,
+                                "weekFrom": str(next_friday()),
+                                "weekTo": str(next_friday()),
+                                "weekNum": "1",
+                                "nextPerson": next_p,
+                                "note": "",
+                            })
+                            api({"action": "saveRotationOrder", "service": "cleaning", "order": new_order})
+                            if "Success" in res:
+                                wa_cleaning(done, fri_str_cl, next_p)
+                                st.success(f"✅ {done} نظّف! القادم: {next_p}")
+                                clr(); st.rerun()
+
+            # ── زر حفظ الترتيب اليدوي ──
+            st.markdown("---")
+            if st.button("💾 حفظ الترتيب الحالي", key="save_cl_order", use_container_width=True):
+                new_order = ",".join(st.session_state["cl_order_draft"])
+                res = api({"action": "saveRotationOrder", "service": "cleaning", "order": new_order})
                 if "Success" in res:
-                    wa_cleaning(cfiller, fri_s, cnext)
-                    st.success("✅ تم! القادم: "+cnext)
+                    st.success("✅ تم حفظ الترتيب")
                     clr(); st.rerun()
-                else:
-                    st.error("خطأ: "+res)
 
             # ── سجل التنظيف ──
             st.markdown("### 📋 سجل التنظيف")
@@ -583,46 +639,73 @@ with tab4:
             else:
                 st.info("لا يوجد سجل.")
     with sv2:
-        st.markdown("""<div class="info-box">🔵 <b>نظام الأنبوبة:</b> الدور يدور على المتاحين.
-من في إجازة أو معفى يُستثنى تلقائياً.</div>""",unsafe_allow_html=True)
+        st.markdown("""<div class="info-box">🔵 <b>نظام الأنبوبة:</b> رتّب الأسماء بالسحب والإفلات. أول اسم عليه الدور.
+بعد الملء ينزل للأسفل تلقائياً. من في إجازة كاملة أو معفى لا يظهر.</div>""",unsafe_allow_html=True)
         if not SHABAB: st.info("أضف أشخاصاً أولاً.")
         else:
+            gas_order = resolve_order("gas", SHABAB, vac_month, gas_ex)
+            cur_gas = gas_order[0] if gas_order else None
+
             st.markdown(
                 '<div style="background:linear-gradient(135deg,#0d1f3c,#1a2e4a);border:2px solid #60a5fa;'
                 'border-radius:16px;padding:18px;text-align:center;margin-bottom:20px;">'
                 '<div style="color:#93c5fd;font-size:.85rem;">🔵 دور ملء الأنبوبة القادم</div>'
-                '<div style="color:#60a5fa;font-size:1.8rem;font-weight:800;margin:6px 0;">'+(nxt_gas or "—")+'</div>'
+                '<div style="color:#60a5fa;font-size:1.8rem;font-weight:800;margin:6px 0;">'+(cur_gas or "—")+'</div>'
                 '</div>',unsafe_allow_html=True)
 
-            gas_active=[p for p in SHABAB if vac_month.get(p,{}).get("type")!="full" and p not in gas_ex]
-            gcols=st.columns(min(len(SHABAB),5))
-            for i,p in enumerate(SHABAB):
-                is_n=p==nxt_gas; is_v=vac_month.get(p,{}).get("type")=="full"; is_ex=p in gas_ex
-                fills=sum(1 for e in gas_log if e.get("filler")==p)
-                if is_v:   sl="🏖️ إجازة"; bc="#3b2a0d"; nc="#8892b0"
-                elif is_ex: sl="🚫 معفى";  bc="#3b0d0d"; nc="#8892b0"
-                elif is_n:  sl="🔵 دوره";  bc="#60a5fa"; nc="#60a5fa"
-                else:       sl=f"⏳ {fills}×"; bc="#2a2f45"; nc="#8892b0"
-                with gcols[i%len(gcols)]:
-                    st.markdown(
-                        '<div style="background:#1a1e2e;border:1px solid '+bc+';border-radius:10px;'
-                        'padding:10px;text-align:center;margin-bottom:8px;">'
-                        '<div style="color:'+nc+';font-weight:700;font-size:.85rem;">'+p+'</div>'
-                        '<div style="color:#6b7280;font-size:.75rem;margin-top:4px;">'+sl+'</div></div>',unsafe_allow_html=True)
+            # ── قائمة السحب والإفلات ──
+            st.markdown("#### 📋 ترتيب الدوران")
+            if "gas_order_draft" not in st.session_state:
+                st.session_state["gas_order_draft"] = gas_order.copy()
+            else:
+                existing = st.session_state["gas_order_draft"]
+                for p in gas_order:
+                    if p not in existing: existing.append(p)
+                st.session_state["gas_order_draft"] = [p for p in existing if p in gas_order]
 
-            st.markdown("### ✅ تسجيل ملء الأنبوبة")
-            g_opts=gas_active or SHABAB
-            gi=g_opts.index(nxt_gas) if nxt_gas in g_opts else 0
-            gfiller=st.radio("👤 من ملأ؟",g_opts,index=gi,horizontal=True,key="g_fill",label_visibility="visible")
-            ng_opts=[p for p in g_opts if p!=gfiller] or g_opts
-            sug_ng=g_opts[(g_opts.index(gfiller)+1)%len(g_opts)] if gfiller in g_opts else ng_opts[0]
-            ni=ng_opts.index(sug_ng) if sug_ng in ng_opts else 0
-            gnext=st.radio("🔜 الدور القادم؟",ng_opts,index=ni,horizontal=True,key="g_next",label_visibility="visible")
-            if st.button("💾 حفظ",type="primary",use_container_width=True,key="save_gas"):
-                res=api({"action":"addGasEntry","filler":gfiller,"nextPerson":gnext})
+            draft_gas = st.session_state["gas_order_draft"]
+
+            for i, p in enumerate(draft_gas):
+                is_first = (i == 0)
+                badge = '<span class="drag-badge drag-badge-gas">🔵 دوره الآن</span>' if is_first else f'<span style="color:#6b7280;font-size:.8rem;">#{i+1}</span>'
+                item_class = "drag-item first-item-gas" if is_first else "drag-item"
+                col_name, col_up, col_down, col_done = st.columns([5, 1, 1, 2])
+                with col_name:
+                    st.markdown(f'<div class="{item_class}"><span class="drag-handle">⠿</span><span class="drag-name">{p}</span>{badge}</div>', unsafe_allow_html=True)
+                with col_up:
+                    if i > 0:
+                        if st.button("⬆️", key=f"gas_up_{i}", help="تحريك لأعلى"):
+                            draft_gas[i], draft_gas[i-1] = draft_gas[i-1], draft_gas[i]
+                            st.session_state["gas_order_draft"] = draft_gas
+                            st.rerun()
+                with col_down:
+                    if i < len(draft_gas)-1:
+                        if st.button("⬇️", key=f"gas_dn_{i}", help="تحريك لأسفل"):
+                            draft_gas[i], draft_gas[i+1] = draft_gas[i+1], draft_gas[i]
+                            st.session_state["gas_order_draft"] = draft_gas
+                            st.rerun()
+                with col_done:
+                    if is_first:
+                        if st.button("✅ ملأ!", key="gas_done_btn", type="primary", use_container_width=True):
+                            done = draft_gas.pop(0)
+                            draft_gas.append(done)
+                            st.session_state["gas_order_draft"] = draft_gas
+                            new_order = ",".join(draft_gas)
+                            next_p = draft_gas[0] if draft_gas else ""
+                            res = api({"action": "addGasEntry", "filler": done, "nextPerson": next_p})
+                            api({"action": "saveRotationOrder", "service": "gas", "order": new_order})
+                            if "Success" in res:
+                                wa_gas(done, next_p)
+                                st.success(f"✅ {done} ملأ! القادم: {next_p}")
+                                clr(); st.rerun()
+
+            st.markdown("---")
+            if st.button("💾 حفظ الترتيب الحالي", key="save_gas_order", use_container_width=True):
+                new_order = ",".join(st.session_state["gas_order_draft"])
+                res = api({"action": "saveRotationOrder", "service": "gas", "order": new_order})
                 if "Success" in res:
-                    wa_gas(gfiller,gnext); st.success("✅ تم! القادم: "+gnext); clr(); st.rerun()
-                else: st.error("خطأ: "+res)
+                    st.success("✅ تم حفظ الترتيب")
+                    clr(); st.rerun()
 
             st.markdown("### 📋 سجل الأنبوبة")
             if gas_log:
@@ -647,23 +730,23 @@ with tab4:
             for xcol,svc,exs,lbl in[(xc1,"cleaning",cl_ex,"🧹 إعفاءات التنظيف"),(xc2,"gas",gas_ex,"🔵 إعفاءات الأنبوبة")]:
                 with xcol:
                     st.markdown("### "+lbl)
-                    for p in SHABAB:
-                        is_v=vac_month.get(p,{}).get("type")=="full"; is_ex=p in exs
+                    visible=[p for p in SHABAB if vac_month.get(p,{}).get("type")!="full"]
+                    if not visible: st.info("الجميع في إجازة.")
+                    for p in visible:
+                        is_ex=p in exs
                         r1,r2=st.columns([3,1])
                         with r1:
-                            if is_v:   st.markdown("🏖️ **"+p+"** — إجازة")
-                            elif is_ex: st.markdown("🚫 **"+p+"** — معفى")
-                            else:       st.markdown("✅ **"+p+"** — متاح")
+                            if is_ex: st.markdown("🚫 **"+p+"** — معفى")
+                            else:     st.markdown("✅ **"+p+"** — متاح")
                         with r2:
-                            if not is_v:
-                                if is_ex:
-                                    if st.button("إلغاء",key="unex_"+svc+"_"+p,use_container_width=True):
-                                        res=api({"action":"removeExemption","service":svc,"name":p})
-                                        if "Success" in res: wa_exempt(p,svc,"remove"); clr(); st.rerun()
-                                else:
-                                    if st.button("إعفاء",key="ex_"+svc+"_"+p,use_container_width=True):
-                                        res=api({"action":"addExemption","service":svc,"name":p})
-                                        if "Success" in res: wa_exempt(p,svc,"add"); clr(); st.rerun()
+                            if is_ex:
+                                if st.button("إلغاء",key="unex_"+svc+"_"+p,use_container_width=True):
+                                    res=api({"action":"removeExemption","service":svc,"name":p})
+                                    if "Success" in res: wa_exempt(p,svc,"remove"); clr(); st.rerun()
+                            else:
+                                if st.button("إعفاء",key="ex_"+svc+"_"+p,use_container_width=True):
+                                    res=api({"action":"addExemption","service":svc,"name":p})
+                                    if "Success" in res: wa_exempt(p,svc,"add"); clr(); st.rerun()
 
 # ── ٥ الإجازات ────────────────────────────────
 with tab5:
@@ -726,7 +809,31 @@ with tab5:
                       "from_date":f"إجازة من {v.get('date','')}","deduct":f"خصم {v.get('deduct_amount',0):.3f}",
                       "fixed":f"إيجار كامل + مبلغ ثابت {v.get('fixed_amount',0):.3f} كنصيب من المصاريف"}.get(vt,"")
                 if v.get("note"): desc+=" | 📝 "+v["note"]
-                st.markdown(f'<div class="vacation-notice">🏖️ <strong>{p}</strong>: {desc}</div>',unsafe_allow_html=True)
+                col_desc, col_btn = st.columns([4,1])
+                with col_desc:
+                    st.markdown(f'<div class="vacation-notice">🏖️ <strong>{p}</strong>: {desc}</div>',unsafe_allow_html=True)
+                with col_btn:
+                    if vt=="full":
+                        if st.button("🔙 عودة", key="ret_"+p, use_container_width=True, help="تسجيل عودة "+p+" من الإجازة"):
+                            res=api({"action":"returnFromVacation","name":p,"month":sel_month_ar})
+                            if "Success" in res:
+                                # عند العودة: موضعه في التنظيف = الثاني، في الأنبوبة = الأخير
+                                for svc in ("cleaning","gas"):
+                                    saved=load_rotation_order(svc)
+                                    full_vac_others={x for x in SHABAB if x!=p and vac_month.get(x,{}).get("type")=="full"}
+                                    cur=[x for x in saved if x not in full_vac_others and x!=p]
+                                    if svc=="cleaning":
+                                        if len(cur)>=1: cur.insert(1,p)
+                                        else: cur.append(p)
+                                    else:
+                                        cur.append(p)
+                                    api({"action":"saveRotationOrder","service":svc,"order":",".join(cur)})
+                                wa("🏠 *تنظيم السكن*\n🔙 عودة من الإجازة\n👤 "+p+"\n🕐 "+_now())
+                                st.success(f"✅ تم تسجيل عودة {p}")
+                                # مسح draft ليُعاد بناؤه
+                                for k in ("cl_order_draft","gas_order_draft"):
+                                    if k in st.session_state: del st.session_state[k]
+                                clr(); st.rerun()
 
 # ── ٦ إدارة الأشخاص ──────────────────────────
 with tab6:
