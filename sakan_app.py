@@ -51,7 +51,7 @@ html,body,[class*="css"]{font-family:'Tajawal',sans-serif!important;direction:rt
 #  الثوابت
 # ══════════════════════════════════════════════
 SHEET_CSV = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT    = "https://script.google.com/macros/s/AKfycbzU_poqBMiy_cegeS64eZl5GFJ3LoCw2fyIH_m0Wo6bG5yFSVBwPMNXu1PqPr1XvQp8/exec"
+SCRIPT    = "https://script.google.com/macros/s/AKfycbwS6-mHQ-9AeP5hRe1x5-zulc-T-b4sssBQvliBOxa1o6rDMoXvE7skCxQH_DZYgUqa/exec"
 MONTHS_AR = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
              "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
              "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
@@ -370,7 +370,7 @@ for p in SHABAB:
     es=exp_share(p); td=es+rpp; v=vac_month.get(p,{})
     summary.append({"الاسم":p,"مدفوع":paid,"حصة":es,"إيجار":rpp,"مستحق":td,"رصيد":paid-td,
                     "إجازة":v.get("type","none"),"نسبة":er[p]})
-ac=sum(1 for p in SHABAB if er[p]>0)
+ac=sum(1 for p in SHABAB if not vac_month.get(p,{}).get("type"))
 if not SHABAB: st.warning("⚠️ لا يوجد أشخاص.")
 
 # ══════════════════════════════════════════════
@@ -809,35 +809,35 @@ with tab5:
             st.divider(); st.markdown("**📋 الإجازات المسجلة:**")
             for p,v in vac_month.items():
                 vt=v.get("type","")
-                desc={"full":"إجازة كاملة (+ إعفاء خدمات)","from_start":f"إجازة من أول الشهر حتى {v.get('date','')}",
+                desc={"full":"إجازة كاملة","from_start":f"إجازة من أول الشهر حتى {v.get('date','')}",
                       "from_date":f"إجازة من {v.get('date','')}","deduct":f"خصم {v.get('deduct_amount',0):.3f}",
                       "fixed":f"إيجار كامل + مبلغ ثابت {v.get('fixed_amount',0):.3f} كنصيب من المصاريف"}.get(vt,"")
+                desc+=" | 🚫 معفى من التنظيف/الأنبوبة"
                 if v.get("note"): desc+=" | 📝 "+v["note"]
                 col_desc, col_btn = st.columns([4,1])
                 with col_desc:
                     st.markdown(f'<div class="vacation-notice">🏖️ <strong>{p}</strong>: {desc}</div>',unsafe_allow_html=True)
                 with col_btn:
-                    if vt=="full":
-                        if st.button("🔙 عودة", key="ret_"+p, use_container_width=True, help="تسجيل عودة "+p+" من الإجازة"):
-                            res=api({"action":"returnFromVacation","name":p,"month":sel_month_ar})
-                            if "Success" in res:
-                                # عند العودة: موضعه في التنظيف = الثاني، في الأنبوبة = الأخير
-                                for svc in ("cleaning","gas"):
-                                    saved=load_rotation_order(svc)
-                                    others_on_vac={x for x in SHABAB if x!=p and vac_month.get(x,{}).get("type")}
-                                    cur=[x for x in saved if x not in others_on_vac and x!=p]
-                                    if svc=="cleaning":
-                                        if len(cur)>=1: cur.insert(1,p)
-                                        else: cur.append(p)
-                                    else:
-                                        cur.append(p)
-                                    api({"action":"saveRotationOrder","service":svc,"order":",".join(cur)})
-                                wa("🏠 *تنظيم السكن*\n🔙 عودة من الإجازة\n👤 "+p+"\n🕐 "+_now())
-                                st.success(f"✅ تم تسجيل عودة {p}")
-                                # مسح draft ليُعاد بناؤه
-                                for k in ("cl_order_draft","gas_order_draft"):
-                                    if k in st.session_state: del st.session_state[k]
-                                clr(); st.rerun()
+                    if st.button("🔙 عودة", key="ret_"+p, use_container_width=True, help="تسجيل عودة "+p+" من الإجازة"):
+                        res=api({"action":"returnFromVacation","name":p,"month":sel_month_ar})
+                        if "Success" in res:
+                            # عند العودة: موضعه في التنظيف = الثاني، في الأنبوبة = الأخير
+                            for svc in ("cleaning","gas"):
+                                saved=load_rotation_order(svc)
+                                others_on_vac={x for x in SHABAB if x!=p and vac_month.get(x,{}).get("type")}
+                                cur=[x for x in saved if x not in others_on_vac and x!=p]
+                                if svc=="cleaning":
+                                    if len(cur)>=1: cur.insert(1,p)
+                                    else: cur.append(p)
+                                else:
+                                    cur.append(p)
+                                api({"action":"saveRotationOrder","service":svc,"order":",".join(cur)})
+                            wa("🏠 *تنظيم السكن*\n🔙 عودة من الإجازة\n👤 "+p+"\n🕐 "+_now())
+                            st.success(f"✅ تم تسجيل عودة {p}")
+                            # مسح draft ليُعاد بناؤه
+                            for k in ("cl_order_draft","gas_order_draft"):
+                                if k in st.session_state: del st.session_state[k]
+                            clr(); st.rerun()
 
 # ── ٦ إدارة الأشخاص ──────────────────────────
 with tab6:
