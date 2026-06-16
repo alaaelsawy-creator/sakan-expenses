@@ -462,7 +462,7 @@ with tab2:
                 am=st.number_input("المبلغ",min_value=0.0,step=0.1,format="%.3f")
                 nt=st.text_input("البيان",placeholder="مثال: شاي، سكر…")
                 ed=st.date_input("التاريخ",value=date.today())
-                is_fixed=st.checkbox("📌 مصروف ثابت (يُقسَّم على الجميع بمن فيهم المجازون)")
+                is_fixed=st.checkbox("📌 مصروف ثابت (يُقسَّم على الجميع بمن فيهم من فى أجازة)")
                 ui=st.file_uploader("📸 صورة الفاتورة",type=["png","jpg","jpeg"])
                 if st.form_submit_button("✅ تسجيل",use_container_width=True):
                     if am>0:
