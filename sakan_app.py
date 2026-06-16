@@ -355,8 +355,6 @@ if not mdf.empty:
             tw=sum(wts.values())
             if tw>0:
                 for p in SHABAB: _share[p]+=amt*wts[p]/tw
-            for p in SHABAB:
-                _share[p]+=amt*wts[p]/tw
 
 def exp_share(p):
     v=vac_month.get(p,{})
