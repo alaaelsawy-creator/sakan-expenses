@@ -51,7 +51,7 @@ html,body,[class*="css"]{font-family:'Tajawal',sans-serif!important;direction:rt
 #  الثوابت
 # ══════════════════════════════════════════════
 SHEET_CSV = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT    = "https://script.google.com/macros/s/AKfycbwS6-mHQ-9AeP5hRe1x5-zulc-T-b4sssBQvliBOxa1o6rDMoXvE7skCxQH_DZYgUqa/exec"
+SCRIPT    = "https://script.google.com/macros/s/AKfycbzMNxsTe0uO1P3sD6lMSt96WOHZCLkDuRc68llY4GK1nPo4TDoxrdDN_46vRlpWB2dU/exec"
 MONTHS_AR = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
              "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
              "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
