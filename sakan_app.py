@@ -51,7 +51,7 @@ html,body,[class*="css"]{font-family:'Tajawal',sans-serif!important;direction:rt
 #  الثوابت
 # ══════════════════════════════════════════════
 SHEET_CSV = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT    = "https://script.google.com/macros/s/AKfycbxPIUzuOqp1wXHk1RiJKPZuSn96pYAxLyIqf5Y5vB_S1Ak1VMZH6zumIGNRAqVt2oRs/exec"
+SCRIPT    = "https://script.google.com/macros/s/AKfycbwwv1C1Qa-oU9QTN29XaCwtYKvFJlKaolRJGEpP4E8-P8T4-fmDHFrIBhJFJpBoTOSW/exec"
 MONTHS_AR = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
              "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
              "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
@@ -515,8 +515,10 @@ with tab3:
                         na2=st.number_input("مبلغ جديد",value=av,format="%.3f",key=f"ea{idx}")
                         nn2=st.text_input("بيان جديد",value=str(row['البيان']),key=f"en{idx}")
                         nd2=st.text_input("تاريخ جديد",value=str(row['التاريخ']),key=f"ed{idx}")
+                        cur_fixed=str(row.get("ثابت","")).strip() in ("نعم","1","Yes","yes")
+                        nf2=st.checkbox("📌 مصروف ثابت (يُقسَّم على الجميع بمن فيهم من في أجازة)",value=cur_fixed,key=f"ef{idx}")
                         if st.button("💾 حفظ",key=f"se{idx}"):
-                            res=api({"action":"editExpense","row":rn,"rowId":ri,"amount":na2,"note":nn2,"date":nd2})
+                            res=api({"action":"editExpense","row":rn,"rowId":ri,"amount":na2,"note":nn2,"date":nd2,"isFixed":"1" if nf2 else "0"})
                             if "Success" in res: wa_edit_expense(na2,nn2); st.success("✅"); clr(); st.rerun()
                             else: st.error(res)
                     with e2:
