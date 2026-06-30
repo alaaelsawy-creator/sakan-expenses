@@ -3,9 +3,12 @@ import pandas as pd
 import requests
 import base64
 from datetime import datetime, date, timedelta
+from zoneinfo import ZoneInfo
 import calendar
 from PIL import Image
 import io
+
+KUWAIT_TZ = ZoneInfo("Asia/Kuwait")
 
 st.set_page_config(page_title="تنظيم السكن", page_icon="🏠",
                    layout="wide", initial_sidebar_state="collapsed")
@@ -51,13 +54,13 @@ html,body,[class*="css"]{font-family:'Tajawal',sans-serif!important;direction:rt
 #  الثوابت
 # ══════════════════════════════════════════════
 SHEET_CSV = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT    = "https://script.google.com/macros/s/AKfycbwwv1C1Qa-oU9QTN29XaCwtYKvFJlKaolRJGEpP4E8-P8T4-fmDHFrIBhJFJpBoTOSW/exec"
+SCRIPT    = "https://script.google.com/macros/s/AKfycbzTTWqLxNOsvBGCUVKxrCYpqGUwP0bCNX2iMF7MtTnjxKp73AcY5ixEO27v-G-pkFzE/exec"
 MONTHS_AR = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
              "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
              "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
 
 def next_friday():
-    t = date.today(); d = (4 - t.weekday()) % 7
+    t = datetime.now(KUWAIT_TZ).date(); d = (4 - t.weekday()) % 7
     return t + timedelta(days=d if d else 7)
 
 # ══════════════════════════════════════════════
@@ -74,7 +77,7 @@ def wa(msg):
                        json={"chatId":cfg["c"],"message":msg},timeout=15)
     except: pass
 
-def _now(): return datetime.now().strftime("%Y-%m-%d %H:%M")
+def _now(): return datetime.now(KUWAIT_TZ).strftime("%Y-%m-%d %H:%M")
 
 def wa_add_expense(name,amt,note,month):  wa("🏠 *تنظيم السكن*\n➕ مصروف جديد\n👤 "+name+"  |  💰 "+str(round(float(amt),3))+"\n📝 "+note+"  |  📅 "+month+"\n🕐 "+_now())
 def wa_edit_expense(amt,note):            wa("🏠 *تنظيم السكن*\n✏️ تعديل مصروف\n💰 "+str(round(float(amt),3))+"  |  📝 "+note+"\n🕐 "+_now())
@@ -267,7 +270,7 @@ gas_log  = load_gas()
 # ══════════════════════════════════════════════
 #  شريط الإعدادات
 # ══════════════════════════════════════════════
-cur_date=datetime.now()
+cur_date=datetime.now(KUWAIT_TZ)
 month_opts=[f"{m:02d} – {MONTHS_AR[datetime(2026,m,1).strftime('%B')]} 2026" for m in range(1,13)]
 c1,c2,c3,c4,c5=st.columns([2,1,1,1,1])
 with c1: sel_month_ar=st.selectbox("📅 الشهر",month_opts,index=cur_date.month-1)
@@ -460,7 +463,7 @@ with tab2:
                 nm=st.selectbox("من دفع؟",SHABAB)
                 am=st.number_input("المبلغ",min_value=0.0,step=0.1,format="%.3f")
                 nt=st.text_input("البيان",placeholder="مثال: شاي، سكر…")
-                ed=st.date_input("التاريخ",value=date.today())
+                ed=st.date_input("التاريخ",value=datetime.now(KUWAIT_TZ).date())
                 is_fixed=st.checkbox("📌 مصروف ثابت (يُقسَّم على الجميع بمن فيهم من في أجازة)")
                 ui=st.file_uploader("📸 صورة الفاتورة",type=["png","jpg","jpeg"])
                 if st.form_submit_button("✅ تسجيل",use_container_width=True):
