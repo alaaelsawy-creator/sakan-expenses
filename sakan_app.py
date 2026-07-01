@@ -54,7 +54,7 @@ html,body,[class*="css"]{font-family:'Tajawal',sans-serif!important;direction:rt
 #  الثوابت
 # ══════════════════════════════════════════════
 SHEET_CSV = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT    = "https://script.google.com/macros/s/AKfycbzu_VeU9PlZ3egY4KvqsM--t6JEzBbswhzj4GMKblPB0l1KEkg9vDK_AWGfn-CVusc_/exec"
+SCRIPT    = "https://script.google.com/macros/s/AKfycbx1blJzd1sA3M_lhfs3OdhyI-a2Fsbj_MTLDuEbX1zM4HbBYUeUocIpmgvdrNDp639r/exec"
 MONTHS_AR = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
              "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
              "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
@@ -196,11 +196,11 @@ def load_rotation_order(service):
     return []
 
 def is_away(v):
-    """يرجع True لو الشخص لسا بإجازة (فيه سجل إجازة ولا يوجد تاريخ عودة مسجّل)"""
+    """يرجع True لو الشخص مازال بإجازة (فيه سجل إجازة ولا يوجد تاريخ عودة مسجّل)"""
     return bool(v) and v.get("type")=="from_date" and not v.get("return_date")
 
 def resolve_order(service, persons, vac_month, exempts):
-    """يرجع قائمة الأشخاص المتاحين بترتيب الدوران المحفوظ، يستثني كل من لسا بإجازة"""
+    """يرجع قائمة الأشخاص المتاحين بترتيب الدوران المحفوظ، يستثني كل من مازال بإجازة"""
     on_vac={p for p in persons if is_away(vac_month.get(p,{}))}
     active=[p for p in persons if p not in on_vac and p not in exempts]
     saved=load_rotation_order(service)
@@ -429,15 +429,15 @@ with tab1:
         lines=[f"*تقرير مصاريف السكن – {sel_month_ar}*",
                f"🏠 الإيجار: {total_rent:.3f} (فرد: {rpp:.3f})",
                f"💰 المصاريف: {tot_exp:.3f}",f"📊 الكلي: {tot_exp+total_rent:.3f}","─────────────"]
-        total_due=0.0
+        total_net=0.0
         for row in summary:
             b=row["رصيد"]; vt=row["إجازة"]
             st2="له 🟢" if b>0 else ("عليه 🔴" if b<0 else "صفر ➖")
             nt=" (إجازة)" if vt=="from_date" else ""
             lines.append(f"• {row['الاسم']}{nt}: {st2} *{abs(b):.3f}*")
-            total_due+=row["مستحق"]
+            total_net+=abs(b)
         lines.append("─────────────")
-        lines.append(f"💵 *مجموع المستحق على الجميع: {total_due:.3f}*")
+        lines.append(f"💵 *مجموع: {total_net:.3f}*")
         report_text = "\n".join(lines)
         st.markdown('<div class="whatsapp-box">'+report_text+'</div>',unsafe_allow_html=True)
         if st.button("📤 إرسال التقرير للواتساب", type="primary", use_container_width=True, key="send_report_wa"):
@@ -755,7 +755,7 @@ with tab5:
     else:
         st.subheader(f"🏖️ إدارة الإجازات – {sel_month_ar}")
         st.markdown("""<div class="info-box">💡 <b>الإجازة تؤثر على المصاريف، والإيجار يبقى ثابتاً على الجميع.</b><br>
-⚠️ من لسا بإجازة (بدون تاريخ عودة) يُعفى تلقائياً من دور التنظيف والأنبوبة.<br>
+⚠️ من مازال بإجازة (بدون تاريخ عودة) يُعفى تلقائياً من دور التنظيف والأنبوبة.<br>
 • يشارك بالكامل في كل مصروف تاريخه <b>قبل أو يساوي</b> تاريخ بداية إجازته.<br>
 • لا يُحسب عليه أي مصروف <b>خلال</b> فترة إجازته.<br>
 • عند تسجيل تاريخ العودة، يعود يشارك بالكامل في كل مصروف من تاريخ العودة حتى آخر الشهر.
@@ -768,23 +768,33 @@ with tab5:
                 on_vac=st.checkbox("🏖️ في إجازة",value=currently_away,key="vac_chk_"+p)
                 ex={}
                 if on_vac:
-                    vd=v.get("date") or date(sel_y,sel_m,15)
-                    if vd<_mn or vd>_mx: vd=date(sel_y,sel_m,15)  # تاريخ مرحّل من شهر آخر خارج النطاق
-                    vdt=st.date_input("📅 تاريخ بداية الإجازة",vd,_mn,_mx,key="vdt_"+p)
+                    orig_vd=v.get("date")
+                    carried_over=orig_vd is not None and orig_vd<_mn  # إجازة بدأت بشهر سابق ومرحّلة
+                    if carried_over:
+                        st.info(f"🏖️ مستمر بإجازة منذ {orig_vd.strftime('%d/%m/%Y')} (بدأت بشهر سابق)")
+                        vdt=orig_vd
+                    else:
+                        vd=orig_vd or date(sel_y,sel_m,15)
+                        if vd<_mn or vd>_mx: vd=date(sel_y,sel_m,15)
+                        vdt=st.date_input("📅 تاريخ بداية الإجازة",vd,_mn,_mx,key="vdt_"+p)
                     ex["date"]=vdt
                     existing_rd=v.get("return_date")
                     has_returned=st.checkbox("✅ عاد بالفعل",value=bool(existing_rd),key="ret_chk_"+p)
                     if has_returned:
                         rd_default=existing_rd or datetime.now(KUWAIT_TZ).date()
-                        if rd_default<vdt: rd_default=vdt
+                        rd_min=_mn if carried_over else vdt
+                        if rd_default<rd_min: rd_default=rd_min
                         if rd_default>_mx: rd_default=_mx
-                        rdt=st.date_input("🔙 تاريخ العودة",rd_default,vdt,_mx,key="rdt_"+p)
+                        rdt=st.date_input("🔙 تاريخ العودة",rd_default,rd_min,_mx,key="rdt_"+p)
                         ex["return_date"]=rdt
-                        pr=min(dim,max(0,(vdt-_mn).days)+max(0,(_mx-rdt).days+1))
-                        st.info(f"📊 يشارك في المصاريف من {_mn.strftime('%d/%m')} حتى {vdt.strftime('%d/%m')}، ومن {rdt.strftime('%d/%m')} حتى آخر الشهر ({pr}/{dim} يوم) — مستثنى فقط بينهما")
+                    pr=round(exp_ratio(ex,dim,sel_y,sel_m)*dim)
+                    if ex.get("return_date"):
+                        st.info(f"📊 يشارك في المصاريف {pr}/{dim} يوم هذا الشهر (مستثنى فقط أثناء فترة الإجازة)")
                     else:
-                        pr=max(0,(vdt-_mn).days)
-                        st.info(f"📊 يشارك في المصاريف من {_mn.strftime('%d/%m')} حتى {vdt.strftime('%d/%m')} فقط ({pr}/{dim} يوم) — ثم يُستثنى بعدها لحين تسجيل تاريخ العودة | 🚫 مستثنى من التنظيف/الأنبوبة")
+                        if carried_over:
+                            st.info(f"📊 مستثنى من كل مصاريف هذا الشهر ({pr}/{dim} يوم) لحين تسجيل تاريخ العودة | 🚫 مستثنى من التنظيف/الأنبوبة")
+                        else:
+                            st.info(f"📊 يشارك في المصاريف من {_mn.strftime('%d/%m')} حتى {vdt.strftime('%d/%m')} فقط ({pr}/{dim} يوم) — ثم يُستثنى بعدها لحين تسجيل تاريخ العودة | 🚫 مستثنى من التنظيف/الأنبوبة")
                 note=st.text_input("📝 ملاحظة",value=v.get("note",""),key="vnote_"+p)
                 if st.button("💾 حفظ "+p,key="sv_"+p):
                     with st.spinner("حفظ…"):
@@ -809,7 +819,7 @@ with tab5:
                 if rd:
                     desc=f"إجازة من {vd_str} — عاد بتاريخ {rd.strftime('%d/%m/%Y')} ✅"
                 else:
-                    desc=f"إجازة من {vd_str} — لسا بإجازة 🚫 (مستثنى من التنظيف/الأنبوبة)"
+                    desc=f"إجازة من {vd_str} — مازال بإجازة 🚫 (مستثنى من التنظيف/الأنبوبة)"
                 if v.get("note"): desc+=" | 📝 "+v["note"]
                 col_desc, col_btn = st.columns([4,1])
                 with col_desc:
