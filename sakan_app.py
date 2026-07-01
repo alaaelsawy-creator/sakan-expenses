@@ -54,7 +54,7 @@ html,body,[class*="css"]{font-family:'Tajawal',sans-serif!important;direction:rt
 #  الثوابت
 # ══════════════════════════════════════════════
 SHEET_CSV = "https://docs.google.com/spreadsheets/d/1g0VfbnUVwNXjV0c2BFlmlX3RSh5eZnpzLUrzwLeqG2I/export?format=csv&gid=0"
-SCRIPT    = "https://script.google.com/macros/s/AKfycbx1blJzd1sA3M_lhfs3OdhyI-a2Fsbj_MTLDuEbX1zM4HbBYUeUocIpmgvdrNDp639r/exec"
+SCRIPT    = "https://script.google.com/macros/s/AKfycbzj7RgaX-iTzfenbC_Nzi4yBikOiV7cb1A72hV15OU5qce6hIXnsXUXy-1pz9kEaS45/exec"
 MONTHS_AR = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
              "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
              "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
@@ -64,18 +64,15 @@ def next_friday():
     return t + timedelta(days=d if d else 7)
 
 # ══════════════════════════════════════════════
-#  واتساب
+#  واتساب — يُرسَل عبر Code.gs (نفس بيانات Green API المحفوظة
+#  هناك في Script Properties)، بدل الحاجة لبيانات منفصلة هنا
 # ══════════════════════════════════════════════
-def _wacfg():
-    try: return {"i":st.secrets["GREEN_API_INSTANCE"],"t":st.secrets["GREEN_API_TOKEN"],"c":st.secrets["GREEN_API_CHAT_ID"]}
-    except: return None
-
 def wa(msg):
-    cfg = _wacfg()
-    if not cfg: return
-    try: requests.post("https://api.green-api.com/waInstance"+cfg["i"]+"/sendMessage/"+cfg["t"],
-                       json={"chatId":cfg["c"],"message":msg},timeout=15)
-    except: pass
+    try:
+        r = requests.post(SCRIPT, data={"action": "sendWhatsAppMessage", "msg": msg}, timeout=15)
+        return "Success" in r.text
+    except Exception:
+        return False
 
 def _now(): return datetime.now(KUWAIT_TZ).strftime("%Y-%m-%d %H:%M")
 
