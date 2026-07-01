@@ -419,7 +419,7 @@ with tab1:
         for row in summary:
             b=row["رصيد"]; vt=row["إجازة"]
             if vt=="from_date":
-                bg='<span class="badge-vacation">📅 إجازة + إيجار كامل</span>'
+                bg='<span class="badge-vacation">📅 إجازة</span>'
             elif abs(b)<0.01: bg='<span class="badge-zero">➖ صفر</span>'
             elif b>0:         bg=f'<span class="badge-green">🟢 له {b:.3f}</span>'
             else:             bg=f'<span class="badge-red">🔴 عليه {abs(b):.3f}</span>'
@@ -437,7 +437,7 @@ with tab1:
             lines.append(f"• {row['الاسم']}{nt}: {st2} *{abs(b):.3f}*")
             total_due+=row["مستحق"]
         lines.append("─────────────")
-        lines.append(f"💵 *إجمالي المستحق على الجميع: {total_due:.3f}*")
+        lines.append(f"💵 *مجموع المستحق على الجميع: {total_due:.3f}*")
         report_text = "\n".join(lines)
         st.markdown('<div class="whatsapp-box">'+report_text+'</div>',unsafe_allow_html=True)
         if st.button("📤 إرسال التقرير للواتساب", type="primary", use_container_width=True, key="send_report_wa"):
@@ -781,10 +781,10 @@ with tab5:
                         rdt=st.date_input("🔙 تاريخ العودة",rd_default,vdt,_mx,key="rdt_"+p)
                         ex["return_date"]=rdt
                         pr=min(dim,max(0,(vdt-_mn).days)+max(0,(_mx-rdt).days+1))
-                        st.info(f"مصاريف: {pr}/{dim} يوم (قبل {vdt.strftime('%d/%m')} وبعد {rdt.strftime('%d/%m')})")
+                        st.info(f"📊 يشارك في المصاريف من {_mn.strftime('%d/%m')} حتى {vdt.strftime('%d/%m')}، ومن {rdt.strftime('%d/%m')} حتى آخر الشهر ({pr}/{dim} يوم) — مستثنى فقط بينهما")
                     else:
                         pr=max(0,(vdt-_mn).days)
-                        st.info(f"مصاريف: {pr}/{dim} يوم (فقط حتى {vdt.strftime('%d/%m')}) | 🚫 مستثنى من التنظيف/الأنبوبة")
+                        st.info(f"📊 يشارك في المصاريف من {_mn.strftime('%d/%m')} حتى {vdt.strftime('%d/%m')} فقط ({pr}/{dim} يوم) — ثم يُستثنى بعدها لحين تسجيل تاريخ العودة | 🚫 مستثنى من التنظيف/الأنبوبة")
                 note=st.text_input("📝 ملاحظة",value=v.get("note",""),key="vnote_"+p)
                 if st.button("💾 حفظ "+p,key="sv_"+p):
                     with st.spinner("حفظ…"):
